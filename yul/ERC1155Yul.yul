@@ -2,6 +2,7 @@
  * @title ERC1155 Purely in Yul.
  * @notice The implementation of the ERC1155 entirely in Yul.
  * @notice EIP => https://eips.ethereum.org/EIPS/eip-1155
+ *   https://smitrajput.notion.site/smitrajput/The-Dark-Arts-of-Yul-Explained-e0b2c178bc52437da1d101f4f96abbe4
  */
 
  object "ERC1155Yul" {   
@@ -46,18 +47,55 @@
             switch getSelector()
 
             // cast 4byte 0x731133e9
-            // cast sig "mint(address,uint256,uint256,bytes)"
             // cast abi-encode "sumArray(uint256[])"  '[1,2,3]'
             // cast calldata "sumArray(uint256[])"  '[1,2,3]'
 
-            // mint(address,uint256,uint256)
+            // cast sig "mint(address,uint256,uint256)"
             case 0x156e29f6 {
                 _mint(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2))
             }
-            // mint(address,uint256,uint256,bytes)
+            // cast sig "mint(address,uint256,uint256,bytes)"
             case 0x731133e9 {
                 _mint(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2))
             }
+
+            // cast sig "batchMint(address,uint256[],uint256[],bytes)"
+            // cast calldata "batchMint(address,uint256[],uint256[],bytes)" 0xf8e81d47203a594245e36c48e151709f0c19fbe8 '[1,2,3]' '[11,21,31]' ""
+
+            // calldata
+
+            // fn selector we're calling (`batchMint(address,uint256[],uint256[])`)
+            // 0x0ca83480
+
+            // `address to` param
+            // 000000000000000000000000f8e81d47203a594245e36c48e151709f0c19fbe8
+
+            // offset of id array => 3* 32 = 96 bytes below from start of 1st (address in this case) line
+            // 0000000000000000000000000000000000000000000000000000000000000060
+
+            // offset of amount array => 7* 32 = 224 bytes below from start of  1st (address in this case) line
+            // 00000000000000000000000000000000000000000000000000000000000000e0
+
+            // length of id array
+            // 0000000000000000000000000000000000000000000000000000000000000003
+
+            // 0000000000000000000000000000000000000000000000000000000000000001
+            // 0000000000000000000000000000000000000000000000000000000000000002
+            // 0000000000000000000000000000000000000000000000000000000000000003
+
+            // length of amount array
+            // 0000000000000000000000000000000000000000000000000000000000000003
+
+            // 000000000000000000000000000000000000000000000000000000000000000b
+            // 0000000000000000000000000000000000000000000000000000000000000015
+            // 000000000000000000000000000000000000000000000000000000000000001f
+
+
+            case 0xb48ab8b6 {
+                _batchMint(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2))
+            }
+
+            // cast sig "balanceOf(address,uint256)"
             // balanceOf(address,uint256)
             case 0x00fdd58e {
                 returnUint(_balanceOf(decodeAsAddress(0), decodeAsUint(1)))
@@ -73,6 +111,34 @@
                 let location := getNestedMappingLocation(balances(), tokenId, to)
                 // store the increased token amount at the location of balance
                 sstore(location, safeAdd(sload(location), amount))
+            }
+
+            function _batchMint(to, idsSizeOffset, amountsSizeOffset) {
+
+                if eq(to, 0x00) {
+                    // revert with: ZERO_ADDRESS
+                    // cast --format-bytes32-string "ZERO_ADDRESS"
+                    mstore(0x00, 0x5a45524f5f414444524553530000000000000000000000000000000000000000)
+                    revert(0x00, 0x20)
+                }
+
+                let idsSize, idsIndex := decodeAsArray(idsSizeOffset)
+                let amountsSize, amountsIndex := decodeAsArray(amountsSizeOffset)
+
+                if iszero(eq(idsSize, amountsSize)) {
+                    // revert with: LENGTH_MISMATCH
+                    // cast --format-bytes32-string "LENGTH_MISMATCH"
+                    mstore(0x0, 0x4c454e4754485f4d49534d415443480000000000000000000000000000000000)
+                    revert(0x0, 0x20)
+                }
+
+                for { let i:= 0 } lt(i, idsSize) { i:= add(i, 1)}
+                {
+                    _mint(to, calldataload(idsIndex), calldataload(amountsIndex))
+                    idsIndex := add(idsIndex, 0x20)
+                    amountsIndex := add(amountsIndex, 0x20)
+                }
+
             }
 
             function _balanceOf(account, tokenId) -> amount {
@@ -124,6 +190,23 @@
                 value := calldataload(pos)
             }
 
+            /// @notice A function to decode a calldata dynamic array
+            /// @param The pointer at which the array is stored in calldata (must point to the size argument)
+            /// @return The size of the array
+            /// @return The offset at which first argument is stored
+            function decodeAsArray(pointer) -> size, firstElementIndex {
+                size := calldataload(add(4, pointer))
+
+                if lt(calldatasize(), add(pointer, mul(size, 0x20))) {
+                    revert(0, 0)
+                }
+
+                // firstElementIndex := add(0x24, pointer)
+                // 32byte + 4 byte
+                firstElementIndex := add(36, pointer)
+
+            }
+
             /* -------------------------------------------------- */
             /* ---------- CALLDATA ENCODING FUNCTIONS ----------- */
             /* -------------------------------------------------- */
@@ -137,8 +220,8 @@
 
             // @dev stores the value in memory 0x00 and returns that part of memory
             function returnUint(v) {
-                mstore(0, v)
-                return(0, 0x20)
+                mstore(0x00, v)
+                return(0x00, 0x20)
             }
 
             // @dev helper function that returns true (uint of 1 === true)
