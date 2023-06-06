@@ -52,10 +52,6 @@ contract ERC1155YulTest is Test {
         vm.label(address(this), "TestContract");
     }
 
-    // function test_Test() public {
-    //     console.logAddress(alice);
-    //     assertEq(true, true);
-    // }
 
     function testMintToEOA() public {
         token.mint(address(0xBEEF), 1337, 1, "");

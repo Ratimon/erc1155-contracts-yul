@@ -1,6 +1,6 @@
 /**
  * @title ERC1155 Purely in Yul.
- * @notice This implements the ERC1155 entirely in Yul.
+ * @notice The implementation of the ERC1155 entirely in Yul.
  * @notice EIP => https://eips.ethereum.org/EIPS/eip-1155
  */
 
@@ -19,32 +19,99 @@
      * @notice Deployed contracts runtime code
      */
         code {
+
+            // mstore(0x80, calldataload(0))
+            // return(0x80, calldatasize())
+            /////
+
+            // _balances[tokenID][userAddress][amount]
+            // mapping(uint256 => mapping(address => uint256)) private _balances;
+
+            // Declaration         - mapping(T1 => T2) v
+            // Value               - v[key]
+            // Location in storage - keccak256(key + v’s slot)
+
+            function balances() -> slot { slot:= 0x00 }
+            // mapping(address => mapping(address => bool)) private _operatorApprovals;
+            function operatorApprovals() -> slot { slot:= 0x01 }
+
+            function uriLength() -> slot { slot := 0x02 }
+
+            // 0x00 - 0x20 => Scratch Space
+            // 0x20 - 0x40 => Scratch Space
+            // 0x40 - 0x60 => Free memory pointer
+            // 0x60 - .... => Free memory
+
+            // Dispatcher based on selector
+            switch getSelector()
+
+            // cast 4byte 0x731133e9
+            // cast sig "mint(address,uint256,uint256,bytes)"
+            // cast abi-encode "sumArray(uint256[])"  '[1,2,3]'
+            // cast calldata "sumArray(uint256[])"  '[1,2,3]'
+
+            // mint(address,uint256,uint256)
+            case 0x156e29f6 {
+                _mint(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2))
+            }
+            // mint(address,uint256,uint256,bytes)
+            case 0x731133e9 {
+                _mint(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2))
+            }
+
+            // balanceOf(address,uint256)
+            case 0x00fdd58e {
+                returnUint(_balanceOf(decodeAsAddress(0), decodeAsUint(1)))
+            }
             
-// functions we need to support:  safeTransferFrom(**address** _from, **address** _to, **uint256** _id, **uint256** _value, **bytes** **calldata** _data) **external**;`
-// functions we need to support:  safeTransferFrom(**address** _from, **address** _to, **uint256** _id, **uint256** _value, **bytes** **calldata** _data) **external**;`
-// functions we need to support:  safeBatchTransferFrom(**address** _from, **address** _to, **uint256**[] **calldata** _ids, **uint256**[] **calldata** _values, **bytes** **calldata** _data) **external**;`
-// functions we need to support:  balanceOf(**address** _owner, **uint256** _id) **external** **view** **returns** (**uint256**);`
-// functions we need to support:  balanceOfBatch(**address**[] **calldata** _owners, **uint256**[] **calldata** _ids) **external** **view** **returns** (**uint256**[] **memory**);`
-// functions we need to support:  setApprovalForAll(**address** _operator, **bool** _approved) **external**;`
-// functions we need to support:  isApprovedForAll(**address** _owner, **address** _operator) **external** **view** **returns** (**bool**);`
 
-            // function mint(account, amount) {
-            //     require(calledByOwner())
+            // No fallback functions
+            default {
+                //returnTrue()
+                revert(0, 0)
+            }
 
-            //     mintTokens(amount)
-            //     addToBalance(account, amount)
-            //     emitTransfer(0, account, amount)
-            // }
+            /* ---------- internal functions ---------- */
+            function _mint(to, tokenId, amount) {
+                let location := getNestedMappingLocation(balances(), tokenId, to)
+                // store at balanceSlot (old Balance stored in that slot + amount minted)
+                // sstore(slot, safeAdd(sload(slot), amount))
+                sstore(location, amount)
+            }
+
+            function _balanceOf(account, tokenId) -> amount {
+                let location := getNestedMappingLocation(balances(), tokenId, account)
+                amount := sload(location)
+            }
+
+            // gets the location where values are stored in a nested mapping
+            function getNestedMappingLocation(mappingSlot, key1, key2 ) -> loc {
+
+                // v[id][account] => keccak256(id + v’s slot location)
+
+                mstore(0x00, key1)                       // store storage slot of mapping
+                mstore(0x20, mappingSlot)                // store 1st key
+
+                let hash := keccak256(0, 0x40)
+
+                // keccak256(id + v’s slot location) => keccak256(account +keccak256(id + v’s slot))
+
+                mstore(0x00, key2)                       // store 2nd key
+                mstore(0x20, hash)                       // store location
+
+                loc := keccak256(0x00, 0x40)             // get hash of those => location
+            }
+
 
             /* -------------------------------------------------- */
             /* ---------- CALLDATA DECODING FUNCTIONS ----------- */
             /* -------------------------------------------------- */
-            // @dev grabs the function selector from the calldata
+            // @dev decodes the function selector from the calldata
             function getSelector() -> selector {
-                selector := div(calldataload(0), 0x100000000000000000000000000000000000000000000000000000000)
+                selector := shr(0xe0, calldataload(0))
             }
 
-            // @dev masks 12 bytes to decode an address from the calldata (address is 20bytes)
+            // @dev decodes the calldata then masks 12 bytes to grab an address( 20bytes)
             function decodeAsAddress(offset) -> value {
                 value := decodeAsUint(offset)
                 if iszero(iszero(and(value, not(0xffffffffffffffffffffffffffffffffffffffff)))) {
@@ -52,7 +119,7 @@
                 }
             }
 
-            // @dev starts at 4th byte to skip function selector and decodes theuint of the calldata
+            // @dev decodes the calldata, starting from the 4th offset to skip selector
             function decodeAsUint(offset) -> value {
                 let pos := add(4, mul(offset, 0x20))
                 if lt(calldatasize(), add(pos, 0x20)) {
@@ -60,6 +127,7 @@
                 }
                 value := calldataload(pos)
             }
+
             /* -------------------------------------------------- */
             /* ---------- CALLDATA ENCODING FUNCTIONS ----------- */
             /* -------------------------------------------------- */
