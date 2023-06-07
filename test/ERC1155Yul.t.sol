@@ -91,6 +91,20 @@ contract ERC1155YulTest is Test {
         assertTrue(token.isApprovedForAll(address(this), address(0xBEEF)));
     }
 
+    function testSafeTransferFromToEOA() public {
+        address from = address(0xABCD);
+
+        token.mint(from, 1337, 100, "");
+
+        vm.prank(from);
+        token.setApprovalForAll(address(this), true);
+
+        token.safeTransferFrom(from, address(0xBEEF), 1337, 70, "");
+
+        assertEq(token.balanceOf(address(0xBEEF), 1337), 70);
+        assertEq(token.balanceOf(from, 1337), 30);
+    }
+
     function testBatchBalanceOf() public {
         address[] memory tos = new address[](5);
         tos[0] = address(0xBEEF);
