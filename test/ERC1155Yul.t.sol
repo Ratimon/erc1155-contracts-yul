@@ -89,6 +89,24 @@ contract ERC1155YulTest is Test {
         // newids[0] = 1342;
         // newids[1] = 1343;
         // uint256[] memory newamounts = new uint256[](2);
+        // newamounts[0] = 300;
+        // newamounts[1] = 400;
+
+        // token.batchMint(address(0xBEEF), newids, newamounts, "");
+
+
+        // assertEq(token.balanceOf(address(0xBEEF), 1342), 300);
+        // assertEq(token.balanceOf(address(0xBEEF), 1343), 400);
+
+
+    }
+
+    // function testBatchMintToEOA2() public {
+
+        // uint256[] memory newids = new uint256[](2);
+        // newids[0] = 1342;
+        // newids[1] = 1343;
+        // uint256[] memory newamounts = new uint256[](2);
         // amounts[0] = 300;
         // amounts[1] = 400;
 
@@ -98,8 +116,6 @@ contract ERC1155YulTest is Test {
         // assertEq(token.balanceOf(address(0xBEEF), 1342), 300);
         // assertEq(token.balanceOf(address(0xBEEF), 1343), 400);
 
-
-
-    }
+    // }
 
 }

@@ -108,6 +108,14 @@
 
             /* ---------- internal functions ---------- */
             function _mint(to, tokenId, amount) {
+                
+                if eq(to, 0x00) {
+                    // revert with: ZERO_ADDRESS
+                    // cast --format-bytes32-string "ZERO_ADDRESS"
+                    mstore(0x00, 0x5a45524f5f414444524553530000000000000000000000000000000000000000)
+                    revert(0x00, 0x20)
+                }
+
                 let location := getNestedMappingLocation(balances(), tokenId, to)
                 // store the increased token amount at the location of balance
                 sstore(location, safeAdd(sload(location), amount))
