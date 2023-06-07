@@ -101,21 +101,37 @@ contract ERC1155YulTest is Test {
 
     }
 
-    // function testBatchMintToEOA2() public {
-
-        // uint256[] memory newids = new uint256[](2);
-        // newids[0] = 1342;
-        // newids[1] = 1343;
-        // uint256[] memory newamounts = new uint256[](2);
-        // amounts[0] = 300;
-        // amounts[1] = 400;
-
-        // token.batchMint(address(0xBEEF), newids, newamounts, "");
 
 
-        // assertEq(token.balanceOf(address(0xBEEF), 1342), 300);
-        // assertEq(token.balanceOf(address(0xBEEF), 1343), 400);
+    function testBatchBalanceOf() public {
+        address[] memory tos = new address[](5);
+        tos[0] = address(0xBEEF);
+        tos[1] = address(0xCAFE);
+        tos[2] = address(0xFACE);
+        tos[3] = address(0xDEAD);
+        tos[4] = address(0xFEED);
 
-    // }
+        uint256[] memory ids = new uint256[](5);
+        ids[0] = 1337;
+        ids[1] = 1338;
+        ids[2] = 1339;
+        ids[3] = 1340;
+        ids[4] = 1341;
+
+        token.mint(address(0xBEEF), 1337, 100, "");
+        token.mint(address(0xCAFE), 1338, 200, "");
+        token.mint(address(0xFACE), 1339, 300, "");
+        token.mint(address(0xDEAD), 1340, 400, "");
+        token.mint(address(0xFEED), 1341, 500, "");
+
+        uint256[] memory balances = token.balanceOfBatch(tos, ids);
+
+        assertEq(balances[0], 100);
+        assertEq(balances[1], 200);
+        assertEq(balances[2], 300);
+        assertEq(balances[3], 400);
+        assertEq(balances[4], 500);
+    }
+
 
 }
