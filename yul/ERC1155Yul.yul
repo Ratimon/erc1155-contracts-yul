@@ -114,45 +114,23 @@
 
             /* ---------- internal functions ---------- */
             function _mint(to, tokenId, amount) {
-                
-                if eq(to, 0x00) {
-                    // revert with: ZERO_ADDRESS
-                    // cast --format-bytes32-string "ZERO_ADDRESS"
-                    mstore(0x00, 0x5a45524f5f414444524553530000000000000000000000000000000000000000)
-                    revert(0x00, 0x20)
-                }
-
+                _doZeroAddressCheck(to)
                 let location := getNestedMappingLocation(balances(), tokenId, to)
                 // store the increased token amount at the location of balance
                 sstore(location, safeAdd(sload(location), amount))
             }
 
             function _batchMint(to, idsSizeOffset, amountsSizeOffset) {
-
-                if eq(to, 0x00) {
-                    // revert with: ZERO_ADDRESS
-                    // cast --format-bytes32-string "ZERO_ADDRESS"
-                    mstore(0x00, 0x5a45524f5f414444524553530000000000000000000000000000000000000000)
-                    revert(0x00, 0x20)
-                }
-
+                _doZeroAddressCheck(to)
                 let idsSize, idsIndex := decodeAsArray(idsSizeOffset)
                 let amountsSize, amountsIndex := decodeAsArray(amountsSizeOffset)
-
-                if iszero(eq(idsSize, amountsSize)) {
-                    // revert with: LENGTH_MISMATCH
-                    // cast --format-bytes32-string "LENGTH_MISMATCH"
-                    mstore(0x0, 0x4c454e4754485f4d49534d415443480000000000000000000000000000000000)
-                    revert(0x0, 0x20)
-                }
-
+                _doLengthMismatchCheck(idsSize,amountsSize)
                 for { let i:= 0 } lt(i, idsSize) { i:= add(i, 1)}
                 {
                     _mint(to, calldataload(idsIndex), calldataload(amountsIndex))
                     idsIndex := add(idsIndex, 0x20)
                     amountsIndex := add(amountsIndex, 0x20)
                 }
-
             }
 
             function _balanceOf(account, tokenId) -> amount {
@@ -165,13 +143,7 @@
                 let accountsSize, accountsIndex := decodeAsArray(accountsSizeOffset)
                 let idsSize, idsIndex := decodeAsArray(idsSizeOffset)
 
-                if iszero(eq(accountsSize, idsSize)) {
-                    // revert with: LENGTH_MISMATCH
-                    // cast --format-bytes32-string "LENGTH_MISMATCH"
-                    mstore(0x0, 0x4c454e4754485f4d49534d415443480000000000000000000000000000000000)
-                    revert(0x0, 0x20)
-                }
-
+                _doLengthMismatchCheck(accountsSize,idsSize)
 
             }
 
@@ -188,6 +160,25 @@
                 mstore(0x20, hash)                       // store location
 
                 location := keccak256(0x00, 0x40)             // get hash of those => location
+            }
+
+
+            function _doLengthMismatchCheck(firstLength, secondLength) {
+                if iszero(eq(firstLength, secondLength)) {
+                    // revert with: LENGTH_MISMATCH
+                    // cast --format-bytes32-string "LENGTH_MISMATCH"
+                    mstore(0x0, 0x4c454e4754485f4d49534d415443480000000000000000000000000000000000)
+                    revert(0x0, 0x20)
+                }
+            }
+
+            function _doZeroAddressCheck(account) {
+                if eq(account, 0x00) {
+                    // revert with: ZERO_ADDRESS
+                    // cast --format-bytes32-string "ZERO_ADDRESS"
+                    mstore(0x00, 0x5a45524f5f414444524553530000000000000000000000000000000000000000)
+                    revert(0x00, 0x20)
+                }
             }
 
             /* -------------------------------------------------- */
