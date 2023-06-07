@@ -54,7 +54,6 @@ contract ERC1155YulTest is Test {
         vm.label(address(this), "TestContract");
     }
 
-
     function testMintToEOA() public {
         token.mint(address(0xBEEF), 1337, 1, "");
 
@@ -85,23 +84,7 @@ contract ERC1155YulTest is Test {
         assertEq(token.balanceOf(address(0xBEEF), 1341), 500);
 
 
-        // uint256[] memory newids = new uint256[](2);
-        // newids[0] = 1342;
-        // newids[1] = 1343;
-        // uint256[] memory newamounts = new uint256[](2);
-        // newamounts[0] = 300;
-        // newamounts[1] = 400;
-
-        // token.batchMint(address(0xBEEF), newids, newamounts, "");
-
-
-        // assertEq(token.balanceOf(address(0xBEEF), 1342), 300);
-        // assertEq(token.balanceOf(address(0xBEEF), 1343), 400);
-
-
     }
-
-
 
     function testBatchBalanceOf() public {
         address[] memory tos = new address[](5);
@@ -133,5 +116,8 @@ contract ERC1155YulTest is Test {
         assertEq(balances[4], 500);
     }
 
+    function testFailMintToZero() public {
+        token.mint(address(0), 1337, 1, "");
+    }
 
 }

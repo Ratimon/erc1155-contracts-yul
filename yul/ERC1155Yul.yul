@@ -66,7 +66,7 @@
             // cast calldata "batchMint(address,uint256[],uint256[],bytes)" 0xf8e81d47203a594245e36c48e151709f0c19fbe8 '[1,2,3]' '[11,21,31]' ""
 
             // calldata
-            // fn selector we're calling (`batchMint(address,uint256[],uint256[])`)
+            // function selector calling  eg. (`batchMint(address,uint256[],uint256[])`)
             // 0x0ca83480
 
             // `address to` param
@@ -103,6 +103,7 @@
             }
 
             // cast sig "balanceOfBatch(address[],uint256[])"
+            // "balanceOfBatch( calldata address[],uint256[])"
             // balanceOfBatch(address[],uint256[])
             case 0x4e1273f4 {
                 returnUint(_balanceOfBatch(decodeAsUint(0), decodeAsUint(1)))
