@@ -3,6 +3,7 @@
  * @notice The implementation of the ERC1155 entirely in Yul.
  * @notice EIP => https://eips.ethereum.org/EIPS/eip-1155
  *   https://smitrajput.notion.site/smitrajput/The-Dark-Arts-of-Yul-Explained-e0b2c178bc52437da1d101f4f96abbe4
+ *   https://hackmd.io/@gn56kcRBQc6mOi7LCgbv1g/rJez8O8st
  */
 
  object "ERC1155Yul" {   
@@ -38,10 +39,12 @@
 
             function uriLength() -> slot { slot := 0x02 }
 
-            // 0x00 - 0x20 => Scratch Space
-            // 0x20 - 0x40 => Scratch Space
-            // 0x40 - 0x60 => Free memory pointer
-            // 0x60 - .... => Free memory
+            // [0x00 - 0x20) => Scratch Space
+            // [0x20 - 0x40) => Scratch Space
+            // [0x40 - 0x60) => Free memory pointer
+            // [0x60 - ....) => Free memory
+
+            setFreeMemoryPointer(0x80)
 
             // Dispatcher based on selector
             switch getSelector()
@@ -63,17 +66,16 @@
             // cast calldata "batchMint(address,uint256[],uint256[],bytes)" 0xf8e81d47203a594245e36c48e151709f0c19fbe8 '[1,2,3]' '[11,21,31]' ""
 
             // calldata
-
             // fn selector we're calling (`batchMint(address,uint256[],uint256[])`)
             // 0x0ca83480
 
             // `address to` param
             // 000000000000000000000000f8e81d47203a594245e36c48e151709f0c19fbe8
 
-            // offset of id array => 3* 32 = 96 bytes below from start of 1st (address in this case) line
+            // offset of id array => 3* 32 = 96 bytes below (3 lines ) from start of 1st (address in this case) line
             // 0000000000000000000000000000000000000000000000000000000000000060
 
-            // offset of amount array => 7* 32 = 224 bytes below from start of  1st (address in this case) line
+            // offset of amount array => 7* 32 = 224 bytes (7 lines ) below from start of  1st (address in this case) line
             // 00000000000000000000000000000000000000000000000000000000000000e0
 
             // length of id array
@@ -90,7 +92,6 @@
             // 0000000000000000000000000000000000000000000000000000000000000015
             // 000000000000000000000000000000000000000000000000000000000000001f
 
-
             case 0xb48ab8b6 {
                 _batchMint(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2))
             }
@@ -104,7 +105,7 @@
             // cast sig "balanceOfBatch(address[],uint256[])"
             // balanceOfBatch(address[],uint256[])
             case 0x4e1273f4 {
-                returnUint(_balanceOfBatch(decodeAsAddress(0), decodeAsUint(1)))
+                returnUint(_balanceOfBatch(decodeAsUint(0), decodeAsUint(1)))
             }
             
             // No fallback functions
@@ -145,6 +146,41 @@
 
                 _doLengthMismatchCheck(accountsSize,idsSize)
 
+                let finalMemorySize := add(0x40, mul(idsSize, 0x20))
+
+                // initialize the array for return, according to the standard
+    
+                // offset of amount array => 1* 32 = 224 bytes (1 line ) below from start of  1st (address in this case) line
+                // 0000000000000000000000000000000000000000000000000000000000000020 - offset to the start of data (The ABI encoding)
+
+                // length of array
+                // 000000000000000000000000000000000000000000000000000000000000000? - length
+
+                // store the array pointer (0x20) starting at the free memory location (0x80)
+                mstore(getFreeMemoryPointer(), 0x20)
+                increaseFreeMemoryPointer()
+
+                // // store length of array
+                mstore(getFreeMemoryPointer(), accountsSize)
+                increaseFreeMemoryPointer()
+
+                // loop and get the balances from the given slots & ids and store them
+                for { let i := 0 } lt(i, accountsSize) { i := add(i, 1) }
+                {
+                    let owner := calldataload(accountsIndex)
+                    let tokenId := calldataload(idsIndex)
+                    let cachedAmount := _balanceOf(owner, tokenId)
+                    // let cachedAmount := _balanceOf(calldataload(accountsIndex), calldataload(idsIndex))
+
+                    mstore(getFreeMemoryPointer(), cachedAmount)
+                    increaseFreeMemoryPointer()
+
+                    accountsIndex := add(accountsIndex, 0x20)
+                    idsIndex := add(idsIndex, 0x20)
+                }
+
+                return(0x80, finalMemorySize)
+
             }
 
             // @dev gets the location where values are stored in a nested mapping
@@ -162,15 +198,9 @@
                 location := keccak256(0x00, 0x40)             // get hash of those => location
             }
 
-
-            function _doLengthMismatchCheck(firstLength, secondLength) {
-                if iszero(eq(firstLength, secondLength)) {
-                    // revert with: LENGTH_MISMATCH
-                    // cast --format-bytes32-string "LENGTH_MISMATCH"
-                    mstore(0x0, 0x4c454e4754485f4d49534d415443480000000000000000000000000000000000)
-                    revert(0x0, 0x20)
-                }
-            }
+            /* ---------------------------------------------------------- */
+            /* ---------------- ERROR HELPER FUNCTIONS ----------------- */
+            /* ---------------------------------------------------------- */
 
             function _doZeroAddressCheck(account) {
                 if eq(account, 0x00) {
@@ -180,6 +210,43 @@
                     revert(0x00, 0x20)
                 }
             }
+
+
+            function _doLengthMismatchCheck(firstLength, secondLength) {
+                if iszero(eq(firstLength, secondLength)) {
+                    // revert with: LENGTH_MISMATCH
+                    // cast --format-bytes32-string "LENGTH_MISMATCH"
+                    mstore(0x00, 0x4c454e4754485f4d49534d415443480000000000000000000000000000000000)
+                    revert(0x00, 0x20)
+                }
+            }
+
+            /* ---------------------------------------------------------- */
+            /* ---------------- MEMORY HELPER FUNCTIONS ----------------- */
+            /* ---------------------------------------------------------- */
+
+            // @dev By default, 0x40 stores the next free memory location
+            // @return the free memory pointer position which is 0x40
+            function getFreeMemoryPointerPosition() -> pos {
+                pos := 0x40
+            }
+
+            // @dev the first memory slot for dynamic memory
+            // @return the value  stored in the memory pointer position (initialized as 0x80)
+            function getFreeMemoryPointer() -> value {
+                value := mload(getFreeMemoryPointerPosition())
+            }
+
+            // @dev increase the memory pointer value by 32 bytes (initialy 0x80 + 0x20 => 0xa0)
+            function increaseFreeMemoryPointer() {
+                mstore(getFreeMemoryPointerPosition(), add(getFreeMemoryPointer(), 0x20))
+            }
+
+            // @dev sets new memory pointer to a given memory slot (default value is 0x80)
+            function setFreeMemoryPointer(slot) {
+                mstore(getFreeMemoryPointerPosition(), slot)
+            }
+
 
             /* -------------------------------------------------- */
             /* ---------- CALLDATA DECODING FUNCTIONS ----------- */
@@ -226,10 +293,6 @@
                 firstElementIndex := add(36, pointer)
 
             }
-
-            /* -------------------------------------------------- */
-            /* ---------- CALLDATA ENCODING FUNCTIONS ----------- */
-            /* -------------------------------------------------- */
 
             // @dev returns memory data (from offset, size of return value)
             // @param from (starting address in memory) to return, e.g. 0x00
