@@ -83,7 +83,12 @@ contract ERC1155YulTest is Test {
         assertEq(token.balanceOf(address(0xBEEF), 1340), 400);
         assertEq(token.balanceOf(address(0xBEEF), 1341), 500);
 
+    }
 
+    function testApproveAll() public {
+        token.setApprovalForAll(address(0xBEEF), true);
+
+        assertTrue(token.isApprovedForAll(address(this), address(0xBEEF)));
     }
 
     function testBatchBalanceOf() public {
