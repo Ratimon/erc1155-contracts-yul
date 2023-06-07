@@ -100,6 +100,12 @@
             case 0x00fdd58e {
                 returnUint(_balanceOf(decodeAsAddress(0), decodeAsUint(1)))
             }
+
+            // cast sig "balanceOfBatch(address[],uint256[])"
+            // balanceOfBatch(address[],uint256[])
+            case 0x4e1273f4 {
+                returnUint(_balanceOfBatch(decodeAsAddress(0), decodeAsUint(1)))
+            }
             
             // No fallback functions
             default {
@@ -152,6 +158,21 @@
             function _balanceOf(account, tokenId) -> amount {
                 let location := getNestedMappingLocation(balances(), tokenId, account)
                 amount := sload(location)
+            }
+
+            function _balanceOfBatch(accountsSizeOffset, idsSizeOffset) -> amount {
+
+                let accountsSize, accountsIndex := decodeAsArray(accountsSizeOffset)
+                let idsSize, idsIndex := decodeAsArray(idsSizeOffset)
+
+                if iszero(eq(accountsSize, idsSize)) {
+                    // revert with: LENGTH_MISMATCH
+                    // cast --format-bytes32-string "LENGTH_MISMATCH"
+                    mstore(0x0, 0x4c454e4754485f4d49534d415443480000000000000000000000000000000000)
+                    revert(0x0, 0x20)
+                }
+
+
             }
 
             // @dev gets the location where values are stored in a nested mapping
