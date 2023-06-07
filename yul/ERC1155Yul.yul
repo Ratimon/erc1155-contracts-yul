@@ -96,6 +96,12 @@
                 _batchMint(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2))
             }
 
+            // cast sig "setApprovalForAll(address,bool)"
+            // setApprovalForAll(address,bool)
+            case 0xa22cb465 {
+                _setApprovalForAll(decodeAsAddress(0), decodeAsUint(1))
+            }
+
             // cast sig "balanceOf(address,uint256)"
             // balanceOf(address,uint256)
             case 0x00fdd58e {
@@ -140,14 +146,20 @@
                 }
             }
 
+            function _setApprovalForAll(operator, approved) {
+                _doZeroAddressCheck(operator)
+                let location := getNestedMappingLocation(operatorApprovals(), caller(), operator)
+                sstore(location, approved)
+            }
+
             function _balanceOf(account, tokenId) -> amount {
                 let location := getNestedMappingLocation(balances(), tokenId, account)
                 amount := sload(location)
             }
 
-            function _isApprovedForAll(account, operator) -> isApproved {
-                let location := getNestedMappingLocation(balances(), account, operator)
-                isApproved := sload(location)
+            function _isApprovedForAll(account, operator) -> approved {
+                let location := getNestedMappingLocation(operatorApprovals(), account, operator)
+                approved := sload(location)
             }
 
             function _balanceOfBatch(accountsSizeOffset, idsSizeOffset) -> amount {
