@@ -22,19 +22,19 @@
      */
         code {
 
-            // mstore(0x80, calldataload(0))
-            // return(0x80, calldatasize())
-            /////
 
-            // _balances[tokenID][userAddress][amount]
             // mapping(uint256 => mapping(address => uint256)) private _balances;
+            // _balances[tokenID][userAddress][amount]
 
             // Declaration         - mapping(T1 => T2) v
             // Value               - v[key]
             // Location in storage - keccak256(key + v’s slot)
 
             function balances() -> slot { slot:= 0x00 }
+
             // mapping(address => mapping(address => bool)) private _operatorApprovals;
+            // _operatorApprovals[account][operator]
+
             function operatorApprovals() -> slot { slot:= 0x01 }
 
             function uriLength() -> slot { slot := 0x02 }
@@ -103,10 +103,15 @@
             }
 
             // cast sig "balanceOfBatch(address[],uint256[])"
-            // "balanceOfBatch( calldata address[],uint256[])"
             // balanceOfBatch(address[],uint256[])
             case 0x4e1273f4 {
                 returnUint(_balanceOfBatch(decodeAsUint(0), decodeAsUint(1)))
+            }
+
+            // cast sig "isApprovedForAll(address,address)"
+            // isApprovedForAll(address,address)
+            case 0xe985e9c5 {
+                returnUint(_isApprovedForAll(decodeAsAddress(0), decodeAsAddress(1)))
             }
             
             // No fallback functions
@@ -138,6 +143,11 @@
             function _balanceOf(account, tokenId) -> amount {
                 let location := getNestedMappingLocation(balances(), tokenId, account)
                 amount := sload(location)
+            }
+
+            function _isApprovedForAll(account, operator) -> isApproved {
+                let location := getNestedMappingLocation(balances(), account, operator)
+                isApproved := sload(location)
             }
 
             function _balanceOfBatch(accountsSizeOffset, idsSizeOffset) -> amount {
