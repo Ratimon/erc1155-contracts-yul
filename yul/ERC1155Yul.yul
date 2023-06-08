@@ -102,6 +102,14 @@
             case 0xf242432a {
                 _safeTransferFrom(decodeAsAddress(0), decodeAsAddress(1), decodeAsUint(2), decodeAsUint(3))
             }
+            // cast sig "safeBatchTransferFrom(address,address,uint256[],uint256[])"
+            case 0xfba0ee64 {
+                _safeBatchTransferFrom(decodeAsAddress(0), decodeAsAddress(1), decodeAsUint(2), decodeAsUint(3))
+            }
+            // cast sig "safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)"
+            case 0x2eb2c2d6 {
+                _safeBatchTransferFrom(decodeAsAddress(0), decodeAsAddress(1), decodeAsUint(2), decodeAsUint(3))
+            }
             // cast sig "setApprovalForAll(address,bool)"
             // setApprovalForAll(address,bool)
             case 0xa22cb465 {
@@ -182,6 +190,31 @@
                 sstore(toLocation, safeAdd(sload(toLocation), amount))
 
             }
+
+            function _safeBatchTransferFrom(from, to, idsSizeOffset, amountsSizeOffset) {
+
+                // require(
+                //     from == _msgSender() || isApprovedForAll(from, _msgSender()),
+                //     "ERC1155: caller is not token owner or approved"
+                // );
+                if iszero(eq(from, caller())) {
+                    if iszero(_isApprovedForAll(from, caller())) {
+                        // cast --format-bytes32-string "NOT_TOKEN_OWNER_OR_APPROVED"
+                        mstore(0x00, 0x4e4f545f544f4b454e5f4f574e45525f4f525f415050524f5645440000000000)
+                        revert(0x00, 0x20)
+                    }
+                }
+
+                _doZeroAddressCheck(to)
+
+                // let idsSize, idsIndex := decodeAsArray(idsSizeOffset)
+                // let amountsSize, amountsIndex := decodeAsArray(amountsSizeOffset)
+
+
+
+            }
+
+            
 
             function _balanceOf(account, id) -> amount {
                 let location := getNestedMappingLocation(balances(), id, account)
