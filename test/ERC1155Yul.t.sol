@@ -105,6 +105,15 @@ contract ERC1155YulTest is Test {
         assertEq(token.balanceOf(from, 1337), 30);
     }
 
+    function testSafeTransferFromSelf() public {
+        token.mint(address(this), 1337, 100, "");
+
+        token.safeTransferFrom(address(this), address(0xBEEF), 1337, 70, "");
+
+        assertEq(token.balanceOf(address(0xBEEF), 1337), 70);
+        assertEq(token.balanceOf(address(this), 1337), 30);
+    }
+
     function testBatchBalanceOf() public {
         address[] memory tos = new address[](5);
         tos[0] = address(0xBEEF);
