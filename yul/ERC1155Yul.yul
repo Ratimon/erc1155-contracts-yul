@@ -186,14 +186,33 @@
                 _doZeroAddressCheck(to)
                 _doApprovalCheck(from)
 
-                // let idsSize, idsIndex := decodeAsArray(idsSizeOffset)
-                // let amountsSize, amountsIndex := decodeAsArray(amountsSizeOffset)
+                let idsSize, idsIndex := decodeAsArray(idsSizeOffset)
+                let amountsSize, amountsIndex := decodeAsArray(amountsSizeOffset)
 
+                _doLengthMismatchCheck(idsSize, amountsSize)
 
+                for { let i:= 0 } lt(i, idsSize) { i:= add(i, 1)}
+                {
+                    let tokenId := calldataload(idsIndex)
+                    let cachedAmount := calldataload(amountsIndex)
+
+                    let fromLocation := getNestedMappingLocation(balances(), tokenId, from)
+                    let fromBalance := sload(fromLocation)
+                    if lt(fromBalance, cachedAmount) {
+                        // cast --format-bytes32-string NOT_ENOUGH_BALANCE
+                        mstore(0x00, 0x4e4f545f454e4f5547485f42414c414e43450000000000000000000000000000)
+                        revert(0x00, 0x20)
+                    }
+                    // store the updated token amount at the location of balance
+                    sstore(fromLocation, safeSub(fromBalance, cachedAmount))
+                    let toLocation := getNestedMappingLocation(balances(), tokenId, to)
+                    sstore(toLocation, safeAdd(sload(toLocation), cachedAmount))
+
+                    idsIndex := add(idsIndex, 0x20)
+                    amountsIndex := add(amountsIndex, 0x20)
+                }
             }
-
             
-
             function _balanceOf(account, id) -> amount {
                 let location := getNestedMappingLocation(balances(), id, account)
                 amount := sload(location)
@@ -209,7 +228,7 @@
                 let accountsSize, accountsIndex := decodeAsArray(accountsSizeOffset)
                 let idsSize, idsIndex := decodeAsArray(idsSizeOffset)
 
-                _doLengthMismatchCheck(accountsSize,idsSize)
+                _doLengthMismatchCheck(accountsSize, idsSize)
 
                 let finalMemorySize := add(0x40, mul(idsSize, 0x20))
 
