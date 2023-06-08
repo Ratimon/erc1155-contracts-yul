@@ -151,6 +151,8 @@ contract ERC1155YulTest is Test {
         vm.prank(from);
         token.setApprovalForAll(address(this), true);
 
+        vm.expectEmit({checkTopic1: true, checkTopic2: true, checkTopic3: true, checkData: true});
+        emit TransferBatch(address(this), from, address(0xBEEF), ids, transferAmounts);
         token.safeBatchTransferFrom(from, address(0xBEEF), ids, transferAmounts, "");
 
         assertEq(token.balanceOf(from, 1337), 50);

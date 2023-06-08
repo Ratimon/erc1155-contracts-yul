@@ -68,13 +68,13 @@
             // function selector calling  eg. (`batchMint(address,uint256[],uint256[])`)
             // 0x0ca83480
 
-            // `address to` param
+            // param 1: `address to`
             // 000000000000000000000000f8e81d47203a594245e36c48e151709f0c19fbe8
 
-            // offset of id array => 3* 32 = 96 bytes below (3 lines ) from start of 1st (address in this case) line
+            // param 2: offset of id array => 3* 32 = 96 bytes below (3 lines ) from start of 1st (address in this case) line
             // 0000000000000000000000000000000000000000000000000000000000000060
 
-            // offset of amount array => 7* 32 = 224 bytes (7 lines ) below from start of  1st (address in this case) line
+            // param 3: offset of amount array => 7* 32 = 224 bytes (7 lines ) below from start of  1st (address in this case) line
             // 00000000000000000000000000000000000000000000000000000000000000e0
 
             // length of id array
@@ -189,6 +189,48 @@
 
                 _doLengthMismatchCheck(idsSize, amountsSize)
 
+                let finalMemorySize := mul(add(0x40, mul(idsSize, 0x20)),2)
+
+                // memory
+
+                // param 1: offset of the id array => 2 * 32 = 64 bytes (2 lines ) from start of 1st line (this line)
+                // 0000000000000000000000000000000000000000000000000000000000000040
+
+                // param 2: offset of the amount array => n * 2 + n * 32 = 64 + n* 32 bytes (2 + n lines ) below from start of 1st line (this line)
+                // 00000000000000000000000000000000000000000000000000000000000000??
+
+                // length of id array
+                // 000000000000000000000000000000000000000000000000000000000000000n
+
+                // element
+                // 0000000000000000000000000000000000000000000000000000000000000001
+                // 0000000000000000000000000000000000000000000000000000000000000002
+                // 0000000000000000000000000000000000000000000000000000000000000003
+                // 0000000000000000000000000000000000000000000000000000000000000004
+                // 0000000000000000000000000000000000000000000000000000000000000005
+
+                // length of amount array
+                // 000000000000000000000000000000000000000000000000000000000000000n
+
+                // store the id array pointer (0x40), starting at the free memory location (0x80)
+                mstore(getFreeMemoryPointer(), 0x40)
+                // store the idsSize
+                mstore(add(0x40, getFreeMemoryPointer()), idsSize)
+
+                // store the amount array pointer (0x40 + 1 length + the size of array ), at the increased location (0x80 + 0x20)
+                let amountsArrayPointer := add(0x40, mul(add (1, idsSize), 0x20))
+                // debugEmit(amountsArrayPointer) //8
+                mstore(add(0x20, getFreeMemoryPointer()), amountsArrayPointer)
+                // store the amountsSize
+                mstore(add(amountsArrayPointer, getFreeMemoryPointer()), amountsSize)
+
+                // 0x60 counts for 2 pointers and 1 length of 1st array
+                let idsIndexPointer := add(getFreeMemoryPointer(), 0x60 )
+                // debugEmit(idsIndexPointer)      //7
+                // 0x40 + 2 length + the size of array
+                let amountsIndexPointer := add(getFreeMemoryPointer(), add(amountsArrayPointer, 0x20))
+                // debugEmit(amountsIndexPointer) //13
+
                 for { let i:= 0 } lt(i, idsSize) { i:= add(i, 1)}
                 {
                     let tokenId := calldataload(idsIndex)
@@ -204,7 +246,16 @@
 
                     idsIndex := add(idsIndex, 0x20)
                     amountsIndex := add(amountsIndex, 0x20)
+
+                    mstore(idsIndexPointer, tokenId)
+                    mstore(amountsIndexPointer, cachedAmount)
+
+                    idsIndexPointer := add(idsIndexPointer, 0x20)
+                    amountsIndexPointer := add(amountsIndexPointer, 0x20)
+
                 }
+                // getFreeMemoryPointer()
+                _emitTransferBatch(caller(), from, to, 0x80, finalMemorySize)
             }
             
             function _balanceOf(account, id) -> amount {
@@ -228,17 +279,20 @@
 
                 // initialize the array for return, according to the standard
     
-                // offset of amount array => 1* 32 = 224 bytes (1 line ) below from start of  1st (address in this case) line
+                // offset of amount array => 1* 32 = 32 bytes (1 line ) below from start of  1st (address in this case) line
                 // 0000000000000000000000000000000000000000000000000000000000000020 - offset to the start of data (The ABI encoding)
 
                 // length of array
                 // 000000000000000000000000000000000000000000000000000000000000000? - length
 
-                // store the array pointer (0x20) starting at the free memory location (0x80)
+                // element
+                // 0000000000000000000000000000000000000000000000000000000000000001
+
+                // store the amount array pointer (0x20), starting at the free memory location (0x80)
                 mstore(getFreeMemoryPointer(), 0x20)
                 increaseFreeMemoryPointer()
 
-                // // store length of array
+                // store the length of the amount array
                 mstore(getFreeMemoryPointer(), accountsSize)
                 increaseFreeMemoryPointer()
 
@@ -288,11 +342,25 @@
             // );
 
             function _emitTransferSingle(operator, from, to, tokenId, amount) {
-                //  cast keccak "TransferSingle(address,address,address,uint256,uint256)"
+                // cast keccak "TransferSingle(address,address,address,uint256,uint256)"
                 let hash := 0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62
                 mstore(0, tokenId)
                 mstore(0x20, amount)
                 log4(0, 0x40, hash, operator, from, to)
+            }
+
+            // event TransferBatch(
+            //     address indexed operator,
+            //     address indexed from,
+            //     address indexed to,
+            //     uint256[] ids,
+            //     uint256[] amounts
+            // );
+
+            function _emitTransferBatch(operator, from, to, memoryIndex, memorySize) {
+                // cast keccak "TransferBatch(address,address,address,uint256[],uint256[])"
+                let hash := 0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb
+                log4(memoryIndex, memorySize, hash, operator, from, to)
             }
 
             /* ---------------------------------------------------------- */
@@ -444,6 +512,10 @@
                 result := sub(a, b)
                 if gt(result, a) { revert(0, 0) }
             }
+
+            // function debugEmit(value) {
+            //     log1(0, 0x00, value)
+            // }
 
         }
     }
