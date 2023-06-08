@@ -141,6 +141,7 @@
                 let location := getNestedMappingLocation(balances(), tokenId, to)
                 // store the increased token amount at the location of balance
                 sstore(location, safeAdd(sload(location), amount))
+                _emitTransferSingle(caller(), 0x00, to, tokenId, amount)
             }
 
             function _batchMint(to, idsSizeOffset, amountsSizeOffset) {
@@ -271,6 +272,26 @@
                 mstore(0x20, hash)                       // store location
 
                 location := keccak256(0x00, 0x40)             // get hash of those => location
+            }
+
+            /* -------------------------------------------------- */
+            /* ---------- EVENTS EMITTING FUNCTIONS ------------- */
+            /* -------------------------------------------------- */
+
+            // event TransferSingle(
+            //     address indexed operator,
+            //     address indexed from,
+            //     address indexed to,
+            //     uint256 id,
+            //     uint256 amount
+            // );
+
+            function _emitTransferSingle(operator, from, to, tokenId, amount) {
+                //  cast keccak "TransferSingle(address,address,address,uint256,uint256)"
+                let hash := 0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62
+                mstore(0, tokenId)
+                mstore(0x20, amount)
+                log4(0, 0x40, hash, operator, from, to)
             }
 
             /* ---------------------------------------------------------- */

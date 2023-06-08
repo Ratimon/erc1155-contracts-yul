@@ -55,6 +55,10 @@ contract ERC1155YulTest is Test {
     }
 
     function testMintToEOA() public {
+
+        vm.expectEmit({checkTopic1: true, checkTopic2: true, checkTopic3: true, checkData: true});
+        emit TransferSingle(address(this), address(0x0), address(0xBEEF), 1337, 1);
+
         token.mint(address(0xBEEF), 1337, 1, "");
 
         assertEq(token.balanceOf(address(0xBEEF), 1337), 1);
