@@ -169,11 +169,7 @@
 
                 let fromLocation := getNestedMappingLocation(balances(), id, from)
                 let fromBalance := sload(fromLocation)
-                if lt(fromBalance, amount) {
-                    // cast --format-bytes32-string NOT_ENOUGH_BALANCE
-                    mstore(0x00, 0x4e4f545f454e4f5547485f42414c414e43450000000000000000000000000000)
-                    revert(0x00, 0x20)
-                }
+                _doSufficientBalanceCheck(fromBalance, amount)
                 // store the updated token amount at the location of balance
                 sstore(fromLocation, safeSub(fromBalance, amount))
                 let toLocation := getNestedMappingLocation(balances(), id, to)
@@ -198,11 +194,7 @@
 
                     let fromLocation := getNestedMappingLocation(balances(), tokenId, from)
                     let fromBalance := sload(fromLocation)
-                    if lt(fromBalance, cachedAmount) {
-                        // cast --format-bytes32-string NOT_ENOUGH_BALANCE
-                        mstore(0x00, 0x4e4f545f454e4f5547485f42414c414e43450000000000000000000000000000)
-                        revert(0x00, 0x20)
-                    }
+                    _doSufficientBalanceCheck(fromBalance, cachedAmount)
                     // store the updated token amount at the location of balance
                     sstore(fromLocation, safeSub(fromBalance, cachedAmount))
                     let toLocation := getNestedMappingLocation(balances(), tokenId, to)
@@ -314,6 +306,14 @@
                         mstore(0x00, 0x4e4f545f544f4b454e5f4f574e45525f4f525f415050524f5645440000000000)
                         revert(0x00, 0x20)
                     }
+                }
+            }
+
+            function _doSufficientBalanceCheck(fromBalance, amount) {
+                if lt(fromBalance, amount) {
+                    // cast --format-bytes32-string NOT_ENOUGH_BALANCE
+                    mstore(0x00, 0x4e4f545f454e4f5547485f42414c414e43450000000000000000000000000000)
+                    revert(0x00, 0x20)
                 }
             }
 
