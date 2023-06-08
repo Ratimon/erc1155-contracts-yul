@@ -164,18 +164,8 @@
 
             function _safeTransferFrom(from, to, id, amount) {
 
-                // require(
-                //     from == _msgSender() || isApprovedForAll(from, _msgSender()),
-                //     "ERC1155: caller is not token owner or approved"
-                // );
-                if iszero(eq(from, caller())) {
-                    if iszero(_isApprovedForAll(from, caller())) {
-                        // cast --format-bytes32-string "NOT_TOKEN_OWNER_OR_APPROVED"
-                        mstore(0x00, 0x4e4f545f544f4b454e5f4f574e45525f4f525f415050524f5645440000000000)
-                        revert(0x00, 0x20)
-                    }
-                }
                 _doZeroAddressCheck(to)
+                _doApprovalCheck(from)
 
                 let fromLocation := getNestedMappingLocation(balances(), id, from)
                 let fromBalance := sload(fromLocation)
@@ -193,23 +183,11 @@
 
             function _safeBatchTransferFrom(from, to, idsSizeOffset, amountsSizeOffset) {
 
-                // require(
-                //     from == _msgSender() || isApprovedForAll(from, _msgSender()),
-                //     "ERC1155: caller is not token owner or approved"
-                // );
-                if iszero(eq(from, caller())) {
-                    if iszero(_isApprovedForAll(from, caller())) {
-                        // cast --format-bytes32-string "NOT_TOKEN_OWNER_OR_APPROVED"
-                        mstore(0x00, 0x4e4f545f544f4b454e5f4f574e45525f4f525f415050524f5645440000000000)
-                        revert(0x00, 0x20)
-                    }
-                }
-
                 _doZeroAddressCheck(to)
+                _doApprovalCheck(from)
 
                 // let idsSize, idsIndex := decodeAsArray(idsSizeOffset)
                 // let amountsSize, amountsIndex := decodeAsArray(amountsSizeOffset)
-
 
 
             }
@@ -257,7 +235,6 @@
                     let owner := calldataload(accountsIndex)
                     let tokenId := calldataload(idsIndex)
                     let cachedAmount := _balanceOf(owner, tokenId)
-                    // let cachedAmount := _balanceOf(calldataload(accountsIndex), calldataload(idsIndex))
 
                     mstore(getFreeMemoryPointer(), cachedAmount)
                     increaseFreeMemoryPointer()
@@ -298,13 +275,26 @@
                 }
             }
 
-
             function _doLengthMismatchCheck(firstLength, secondLength) {
                 if iszero(eq(firstLength, secondLength)) {
                     // revert with: LENGTH_MISMATCH
                     // cast --format-bytes32-string "LENGTH_MISMATCH"
                     mstore(0x00, 0x4c454e4754485f4d49534d415443480000000000000000000000000000000000)
                     revert(0x00, 0x20)
+                }
+            }
+
+            function _doApprovalCheck(from) {
+                // require(
+                //     from == _msgSender() || isApprovedForAll(from, _msgSender()),
+                //     "ERC1155: caller is not token owner or approved"
+                // );
+                if iszero(eq(from, caller())) {
+                    if iszero(_isApprovedForAll(from, caller())) {
+                        // cast --format-bytes32-string "NOT_TOKEN_OWNER_OR_APPROVED"
+                        mstore(0x00, 0x4e4f545f544f4b454e5f4f574e45525f4f525f415050524f5645440000000000)
+                        revert(0x00, 0x20)
+                    }
                 }
             }
 
