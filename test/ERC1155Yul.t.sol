@@ -103,6 +103,8 @@ contract ERC1155YulTest is Test {
         vm.prank(from);
         token.setApprovalForAll(address(this), true);
 
+        vm.expectEmit({checkTopic1: true, checkTopic2: true, checkTopic3: true, checkData: true});
+        emit TransferSingle(address(this), from, address(0xBEEF), 1337, 70);
         token.safeTransferFrom(from, address(0xBEEF), 1337, 70, "");
 
         assertEq(token.balanceOf(address(0xBEEF), 1337), 70);
@@ -112,6 +114,8 @@ contract ERC1155YulTest is Test {
     function testSafeTransferFromSelf() public {
         token.mint(address(this), 1337, 100, "");
 
+        vm.expectEmit({checkTopic1: true, checkTopic2: true, checkTopic3: true, checkData: true});
+        emit TransferSingle(address(this), address(this), address(0xBEEF), 1337, 70);
         token.safeTransferFrom(address(this), address(0xBEEF), 1337, 70, "");
 
         assertEq(token.balanceOf(address(0xBEEF), 1337), 70);

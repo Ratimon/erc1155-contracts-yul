@@ -136,12 +136,12 @@
             }
 
             /* ---------- internal functions ---------- */
-            function _mint(to, tokenId, amount) {
+            function _mint(to, id, amount) {
                 _doZeroAddressCheck(to)
-                let location := getNestedMappingLocation(balances(), tokenId, to)
+                let location := getNestedMappingLocation(balances(), id, to)
                 // store the increased token amount at the location of balance
                 sstore(location, safeAdd(sload(location), amount))
-                _emitTransferSingle(caller(), 0x00, to, tokenId, amount)
+                _emitTransferSingle(caller(), 0x00, to, id, amount)
             }
 
             function _batchMint(to, idsSizeOffset, amountsSizeOffset) {
@@ -176,6 +176,7 @@
                 let toLocation := getNestedMappingLocation(balances(), id, to)
                 sstore(toLocation, safeAdd(sload(toLocation), amount))
 
+                _emitTransferSingle(caller(), from, to, id, amount)
             }
 
             function _safeBatchTransferFrom(from, to, idsSizeOffset, amountsSizeOffset) {
