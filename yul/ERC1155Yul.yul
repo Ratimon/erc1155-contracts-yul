@@ -22,7 +22,6 @@
      */
         code {
 
-
             // mapping(uint256 => mapping(address => uint256)) private _balances;
             // _balances[tokenID][userAddress][amount]
 
@@ -95,31 +94,34 @@
             case 0xb48ab8b6 {
                 _batchMint(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2))
             }
-
+            // cast sig "safeTransferFrom(address,address,uint256,uint256)"
+            case 0x0febdd49 {
+                _safeTransferFrom(decodeAsAddress(0), decodeAsAddress(1), decodeAsUint(2), decodeAsUint(3))
+            }
+            // cast sig "safeTransferFrom(address,address,uint256,uint256,bytes)"
+            case 0xf242432a {
+                _safeTransferFrom(decodeAsAddress(0), decodeAsAddress(1), decodeAsUint(2), decodeAsUint(3))
+            }
             // cast sig "setApprovalForAll(address,bool)"
             // setApprovalForAll(address,bool)
             case 0xa22cb465 {
                 _setApprovalForAll(decodeAsAddress(0), decodeAsUint(1))
             }
-
             // cast sig "balanceOf(address,uint256)"
             // balanceOf(address,uint256)
             case 0x00fdd58e {
                 returnUint(_balanceOf(decodeAsAddress(0), decodeAsUint(1)))
             }
-
             // cast sig "balanceOfBatch(address[],uint256[])"
             // balanceOfBatch(address[],uint256[])
             case 0x4e1273f4 {
                 returnUint(_balanceOfBatch(decodeAsUint(0), decodeAsUint(1)))
             }
-
             // cast sig "isApprovedForAll(address,address)"
             // isApprovedForAll(address,address)
             case 0xe985e9c5 {
                 returnUint(_isApprovedForAll(decodeAsAddress(0), decodeAsAddress(1)))
             }
-            
             // No fallback functions
             default {
                 revert(0, 0)
@@ -152,8 +154,37 @@
                 sstore(location, approved)
             }
 
-            function _balanceOf(account, tokenId) -> amount {
-                let location := getNestedMappingLocation(balances(), tokenId, account)
+            function _safeTransferFrom(from, to, id, amount) {
+
+                // require(
+                //     from == _msgSender() || isApprovedForAll(from, _msgSender()),
+                //     "ERC1155: caller is not token owner or approved"
+                // );
+                if iszero(eq(from, caller())) {
+                    if iszero(_isApprovedForAll(from, caller())) {
+                        // cast --format-bytes32-string "NOT_TOKEN_OWNER_OR_APPROVED"
+                        mstore(0x00, 0x4e4f545f544f4b454e5f4f574e45525f4f525f415050524f5645440000000000)
+                        revert(0x00, 0x20)
+                    }
+                }
+                _doZeroAddressCheck(to)
+
+                let fromLocation := getNestedMappingLocation(balances(), id, from)
+                let fromBalance := sload(fromLocation)
+                if lt(fromBalance, amount) {
+                    // cast --format-bytes32-string NOT_ENOUGH_BALANCE
+                    mstore(0x00, 0x4e4f545f454e4f5547485f42414c414e43450000000000000000000000000000)
+                    revert(0x00, 0x20)
+                }
+                // store the updated token amount at the location of balance
+                sstore(fromLocation, safeSub(fromBalance, amount))
+                let toLocation := getNestedMappingLocation(balances(), id, to)
+                sstore(toLocation, safeAdd(sload(toLocation), amount))
+
+            }
+
+            function _balanceOf(account, id) -> amount {
+                let location := getNestedMappingLocation(balances(), id, account)
                 amount := sload(location)
             }
 
@@ -344,6 +375,12 @@
                 result := add(a, b)
                 if or(lt(result, a), lt(result, b)) { revert(0, 0) }
             }
+
+            function safeSub(a, b) -> result {
+                result := sub(a, b)
+                if gt(result, a) { revert(0, 0) }
+            }
+
         }
     }
 
