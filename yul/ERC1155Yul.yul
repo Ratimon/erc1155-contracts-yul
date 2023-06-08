@@ -158,7 +158,12 @@
             }
 
             function _setApprovalForAll(operator, approved) {
-                _doZeroAddressCheck(operator)
+                if eq(operator, approved) {
+                    // revert with: APPROVE_SELF
+                    // cast --format-bytes32-string "APPROVE_SELFS"
+                    mstore(0x00, 0x415050524f56455f53454c465300000000000000000000000000000000000000)
+                    revert(0x00, 0x20)
+                }
                 let location := getNestedMappingLocation(operatorApprovals(), caller(), operator)
                 sstore(location, approved)
             }
