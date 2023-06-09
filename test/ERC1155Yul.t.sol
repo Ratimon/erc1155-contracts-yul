@@ -90,6 +90,8 @@ contract ERC1155YulTest is Test {
     }
 
     function testApproveAll() public {
+        vm.expectEmit({checkTopic1: true, checkTopic2: true, checkTopic3: true, checkData: true});
+        emit ApprovalForAll(address(this), address(0xBEEF), true);
         token.setApprovalForAll(address(0xBEEF), true);
 
         assertTrue(token.isApprovedForAll(address(this), address(0xBEEF)));
@@ -393,6 +395,7 @@ contract ERC1155YulTest is Test {
 
 
     function testApproveAll(address to, bool approved) public {
+
         token.setApprovalForAll(to, approved);
 
         assertEq(token.isApprovedForAll(address(this), to), approved);

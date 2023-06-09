@@ -149,7 +149,7 @@
             }
 
             function _setApprovalForAll(operator, approved) {
-                if eq(operator, approved) {
+                if eq(operator, caller()) {
                     // revert with: APPROVE_SELF
                     // cast --format-bytes32-string "APPROVE_SELFS"
                     mstore(0x00, 0x415050524f56455f53454c465300000000000000000000000000000000000000)
@@ -157,6 +157,7 @@
                 }
                 let location := getNestedMappingLocation(operatorApprovals(), caller(), operator)
                 sstore(location, approved)
+                _emitApprovalForAll(caller(), operator, approved)
             }
 
             function _safeTransferFrom(from, to, id, amount) {
@@ -345,6 +346,19 @@
                 // cast keccak "TransferBatch(address,address,address,uint256[],uint256[])"
                 let hash := 0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb
                 log4(memoryIndex, memorySize, hash, operator, from, to)
+            }
+
+            // event ApprovalForAll(
+            //     address indexed owner,
+            //     address indexed operator,
+            //     bool approved
+            // );
+
+            function _emitApprovalForAll(owner, operator, approved) {
+                // cast keccak "ApprovalForAll(address,address,bool)"
+                let hash := 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31
+                mstore(0, approved)
+                log3(0, 0x20, hash, owner, operator)
             }
 
             /* ---------------------------------------------------------- */
