@@ -11,7 +11,6 @@
      * @notice Constructor
      */
     code {
-        // Basic constructor
         datacopy(0, dataoffset("runtime"), datasize("runtime"))
         return(0, datasize("runtime"))
     }
@@ -28,12 +27,10 @@
             // Declaration         - mapping(T1 => T2) v
             // Value               - v[key]
             // Location in storage - keccak256(key + v’s slot)
-
             function balances() -> slot { slot:= 0x00 }
 
             // mapping(address => mapping(address => bool)) private _operatorApprovals;
             // _operatorApprovals[account][operator]
-
             function operatorApprovals() -> slot { slot:= 0x01 }
 
             function uriLength() -> slot { slot := 0x02 }
@@ -42,15 +39,10 @@
             // [0x20 - 0x40) => Scratch Space
             // [0x40 - 0x60) => Free memory pointer
             // [0x60 - ....) => Free memory
-
             setFreeMemoryPointer(0x80)
 
             // Dispatcher based on selector
             switch getSelector()
-
-            // cast 4byte 0x731133e9
-            // cast abi-encode "sumArray(uint256[])"  '[1,2,3]'
-            // cast calldata "sumArray(uint256[])"  '[1,2,3]'
 
             // cast sig "mint(address,uint256,uint256)"
             case 0x156e29f6 {
@@ -90,7 +82,6 @@
             // 000000000000000000000000000000000000000000000000000000000000000b
             // 0000000000000000000000000000000000000000000000000000000000000015
             // 000000000000000000000000000000000000000000000000000000000000001f
-
             case 0xb48ab8b6 {
                 _batchMint(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2))
             }
@@ -169,7 +160,6 @@
             }
 
             function _safeTransferFrom(from, to, id, amount) {
-
                 _doZeroAddressCheck(to)
                 _doApprovalCheck(from)
 
@@ -185,7 +175,6 @@
             }
 
             function _safeBatchTransferFrom(from, to, idsSizeOffset, amountsSizeOffset) {
-
                 _doZeroAddressCheck(to)
                 _doApprovalCheck(from)
 
@@ -217,24 +206,21 @@
                 // length of amount array
                 // 000000000000000000000000000000000000000000000000000000000000000n
 
-                // store the id array pointer (0x40), starting at the free memory location (0x80)
+                // store the id array pointer (0x40), at the free memory location (0x80)
                 mstore(getFreeMemoryPointer(), 0x40)
-                // store the idsSize
+                // store the length of the ids array
                 mstore(add(0x40, getFreeMemoryPointer()), idsSize)
 
-                // store the amount array pointer (0x40 + 1 length + the size of array ), at the increased location (0x80 + 0x20)
+                // store the amount array pointer: 0x160 = 0x40 (2 pointers) + 0x20(single length) + 0x100( eg. 5 elements ), at the (increased) second byte
                 let amountsArrayPointer := add(0x40, mul(add (1, idsSize), 0x20))
-                // debugEmit(amountsArrayPointer) //8
                 mstore(add(0x20, getFreeMemoryPointer()), amountsArrayPointer)
-                // store the amountsSize
+                // store the length of the amounts array
                 mstore(add(amountsArrayPointer, getFreeMemoryPointer()), amountsSize)
 
-                // 0x60 counts for 2 pointers and 1 length of 1st array
+                // store the first index array pointer: 0x60 = 0x40 (2 pointers) + 0x20(single length)
                 let idsIndexPointer := add(getFreeMemoryPointer(), 0x60 )
-                // debugEmit(idsIndexPointer)      //7
-                // 0x40 + 2 length + the size of array
+                // store the amount array pointer plus 1 byte: 0x180 = 0x40 (2 pointers) + 0x40(double length) + 0x100( eg. 5 elements )
                 let amountsIndexPointer := add(getFreeMemoryPointer(), add(amountsArrayPointer, 0x20))
-                // debugEmit(amountsIndexPointer) //13
 
                 for { let i:= 0 } lt(i, idsSize) { i:= add(i, 1)}
                 {
@@ -257,10 +243,8 @@
 
                     idsIndexPointer := add(idsIndexPointer, 0x20)
                     amountsIndexPointer := add(amountsIndexPointer, 0x20)
-
                 }
-                // getFreeMemoryPointer()
-                _emitTransferBatch(caller(), from, to, 0x80, finalMemorySize)
+                _emitTransferBatch(caller(), from, to, getFreeMemoryPointer(), finalMemorySize)
             }
             
             function _balanceOf(account, id) -> amount {
@@ -274,7 +258,6 @@
             }
 
             function _balanceOfBatch(accountsSizeOffset, idsSizeOffset) -> amount {
-
                 let accountsSize, accountsIndex := decodeAsArray(accountsSizeOffset)
                 let idsSize, idsIndex := decodeAsArray(idsSizeOffset)
 
@@ -282,7 +265,7 @@
 
                 let finalMemorySize := add(0x40, mul(idsSize, 0x20))
 
-                // initialize the array for return, according to the standard
+                // initialize the array for return
     
                 // offset of amount array => 1* 32 = 32 bytes (1 line ) below from start of  1st (address in this case) line
                 // 0000000000000000000000000000000000000000000000000000000000000020 - offset to the start of data (The ABI encoding)
@@ -301,7 +284,6 @@
                 mstore(getFreeMemoryPointer(), accountsSize)
                 increaseFreeMemoryPointer()
 
-                // loop and get the balances from the given slots & ids and store them
                 for { let i := 0 } lt(i, accountsSize) { i := add(i, 1) }
                 {
                     let owner := calldataload(accountsIndex)
@@ -314,9 +296,7 @@
                     accountsIndex := add(accountsIndex, 0x20)
                     idsIndex := add(idsIndex, 0x20)
                 }
-
                 return(0x80, finalMemorySize)
-
             }
 
             // @dev gets the location where values are stored in a nested mapping
@@ -324,14 +304,13 @@
                 // v[id][account] => keccak256(id + v’s slot location)
                 mstore(0x00, key1)                       // store storage slot of mapping
                 mstore(0x20, mappingSlot)                // store 1st key
-
                 let hash := keccak256(0, 0x40)
-                // keccak256(id + v’s slot location) => keccak256(account +keccak256(id + v’s slot))
 
+                // => keccak256(account +keccak256(id + v’s slot))
                 mstore(0x00, key2)                       // store 2nd key
                 mstore(0x20, hash)                       // store location
 
-                location := keccak256(0x00, 0x40)             // get hash of those => location
+                location := keccak256(0x00, 0x40)        // get hash of those => location
             }
 
             /* -------------------------------------------------- */
@@ -474,20 +453,19 @@
             /// @return The offset at which first argument is stored
             function decodeAsArray(pointer) -> size, firstElementIndex {
                 size := calldataload(add(4, pointer))
-
                 if lt(calldatasize(), add(pointer, mul(size, 0x20))) {
                     revert(0, 0)
                 }
-
                 // firstElementIndex := add(0x24, pointer)
                 // 32byte + 4 byte
                 firstElementIndex := add(36, pointer)
 
             }
 
-            // @dev returns memory data (from offset, size of return value)
             // @param from (starting address in memory) to return, e.g. 0x00
             // @param to (size of the return value), e.g. 0x20 for 32 bytes 0x40 for 64 bytes
+            // @return The offset
+            // @return The size of return value
             function returnMemory(offset, size) {
                 return(offset, size)
             }
@@ -517,10 +495,6 @@
                 result := sub(a, b)
                 if gt(result, a) { revert(0, 0) }
             }
-
-            // function debugEmit(value) {
-            //     log1(0, 0x00, value)
-            // }
 
         }
     }
