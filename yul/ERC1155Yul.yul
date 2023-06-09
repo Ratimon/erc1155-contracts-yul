@@ -21,19 +21,26 @@
      */
         code {
 
+            // slot0
             // mapping(uint256 => mapping(address => uint256)) private _balances;
-            // _balances[tokenID][userAddress][amount]
+            // _balances[tokenID][account]
+            function balances() -> slot { slot:= 0x00 }
+
+            // slot1
+            // mapping(address => mapping(address => bool)) private _operatorApprovals;
+            // _operatorApprovals[owner][operator]
+            function operatorApprovals() -> slot { slot:= 0x01 }
+
+            // slot2
+            function uriLength() -> slot { slot := 0x02 }
+
+            // slot keccak256( account + keccak256(id + v’s slot) )
+            // slot keccak256( operater + keccak256(owner + v’s slot) )
+            // slot keccak256( uriLength) + i
 
             // Declaration         - mapping(T1 => T2) v
             // Value               - v[key]
             // Location in storage - keccak256(key + v’s slot)
-            function balances() -> slot { slot:= 0x00 }
-
-            // mapping(address => mapping(address => bool)) private _operatorApprovals;
-            // _operatorApprovals[account][operator]
-            function operatorApprovals() -> slot { slot:= 0x01 }
-
-            function uriLength() -> slot { slot := 0x02 }
 
             // [0x00 - 0x20) => Scratch Space
             // [0x20 - 0x40) => Scratch Space
@@ -121,6 +128,10 @@
             case 0xe985e9c5 {
                 returnUint(_isApprovedForAll(decodeAsAddress(0), decodeAsAddress(1)))
             }
+
+            // cast abi-encode "setURI(string)"  'Test'
+            // cast abi-encode "setURI(string)"  'https://domain/0.json'
+            
             // No fallback functions
             default {
                 revert(0, 0)
@@ -305,7 +316,7 @@
                 // v[id][account] => keccak256(id + v’s slot location)
                 mstore(0x00, key1)                       // store storage slot of mapping
                 mstore(0x20, mappingSlot)                // store 1st key
-                let hash := keccak256(0, 0x40)
+                let hash := keccak256(0x00, 0x40)
 
                 // => keccak256(account +keccak256(id + v’s slot))
                 mstore(0x00, key2)                       // store 2nd key
@@ -476,18 +487,19 @@
 
             }
 
-            // @param from (starting address in memory) to return, e.g. 0x00
-            // @param to (size of the return value), e.g. 0x20 for 32 bytes 0x40 for 64 bytes
-            // @return The offset
-            // @return The size of return value
-            function returnMemory(offset, size) {
-                return(offset, size)
-            }
+            // // @param from (starting address in memory) to return, e.g. 0x00
+            // // @param to (size of the return value), e.g. 0x20 for 32 bytes 0x40 for 64 bytes
+            // // @return The offset
+            // // @return The size of return value
+            // function returnMemory(offset, size) {
+            //     return(offset, size)
+            // }
 
             // @dev stores the value in memory 0x00 and returns that part of memory
             function returnUint(v) {
-                mstore(0x00, v)
-                return(0x00, 0x20)
+                let ptr := getFreeMemoryPointer()
+                mstore(ptr, v)
+                return(ptr, 0x20)
             }
 
             // @dev helper function that returns true (uint of 1 === true)
