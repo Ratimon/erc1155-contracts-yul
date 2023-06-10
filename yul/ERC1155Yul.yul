@@ -1,6 +1,6 @@
 /**
- * @title ERC1155 Purely in Yul.
- * @notice The implementation of the ERC1155 entirely in Yul.
+ * @title ERC1155 in Pure Yul.
+ * @notice The implementation of the ERC1155 in Pure Yul.
  * @notice EIP => https://eips.ethereum.org/EIPS/eip-1155
  *   https://smitrajput.notion.site/smitrajput/The-Dark-Arts-of-Yul-Explained-e0b2c178bc52437da1d101f4f96abbe4
  *   https://hackmd.io/@gn56kcRBQc6mOi7LCgbv1g/rJez8O8st
@@ -126,6 +126,15 @@
 
             // 68747470733a2f2f746f6b656e2d63646e2d646f6d61696e2f302e6a736f6e00
 
+
+            // 0000000000000000000000000000000000000000000000000000000000000020
+            // 000000000000000000000000000000000000000000000000000000000000001f
+            // 68747470733a2f2f746f6b656e2d63646e2d646f6d61696e2f302e6a736f6e00
+            // 0000000000000000000000000000000000000000000000000000000000000000
+            // 0000000000000000000000000000000000000000000000000000000000000000
+            // 0000000000000000000000000000000000000000000000000000000000000000
+            // 0000000000000000000000000000000000000000000000000000000000000000
+
             // setURI(string)
             case 0x02fe5305 {
                 _setURI(decodeAsUint(0))
@@ -133,21 +142,28 @@
             // cast sig "balanceOf(address,uint256)"
             // balanceOf(address,uint256)
             case 0x00fdd58e {
-                returnUint(_balanceOf(decodeAsAddress(0), decodeAsUint(1)))
+                returnBytes32(_balanceOf(decodeAsAddress(0), decodeAsUint(1)))
             }
             // cast sig "balanceOfBatch(address[],uint256[])"
             // balanceOfBatch(address[],uint256[])
             case 0x4e1273f4 {
-                returnUint(_balanceOfBatch(decodeAsUint(0), decodeAsUint(1)))
+                returnBytes32(_balanceOfBatch(decodeAsUint(0), decodeAsUint(1)))
             }
             // cast sig "isApprovedForAll(address,address)"
             // isApprovedForAll(address,address)
             case 0xe985e9c5 {
-                returnUint(_isApprovedForAll(decodeAsAddress(0), decodeAsAddress(1)))
+                returnBytes32(_isApprovedForAll(decodeAsAddress(0), decodeAsAddress(1)))
             }
 
             // cast abi-encode "setURI(string)"  'Test'
             // cast abi-encode "setURI(string)"  'https://domain/0.json'
+
+            // cast sig "uri(uint256)"
+            // uri(uint256)
+            case 0x0e89341c {
+                let startMptr, size := _uri(decodeAsUint(0))
+                returnBytesN(startMptr, size)
+            }
             
             // No fallback functions
             default {
@@ -199,7 +215,6 @@
                 let amountsSize, amountsIndex := decodeAsArray(amountsSizeOffset)
 
                 _doLengthMismatchCheck(idsSize, amountsSize)
-
                 let finalMemorySize := mul(add(0x40, mul(idsSize, 0x20)),2)
 
                 // memory
@@ -288,13 +303,17 @@
                 sstore(uriLength(), stringSize)
 
                 let bound := div(stringSize, 0x20)
-                if mod(bound, 0x20) {
+                if mod(stringSize, 0x20) {
                     bound := add(bound, 1)
                 }
+
+                // debugEmit(stringSize) 
+                // debugEmit(bound) 
 
                 for { let i:= 0 } lt(i, bound) { i:= add(i, 1)}
                 {
                     let cachedChunk := calldataload(stringIndex)
+                    // debugEmit(cachedChunk) 
                     // keccak256(v’s slot)+ n*(sizeof(T))
                     sstore(safeAdd(initialLocation, i), cachedChunk)
                     stringIndex := add(stringIndex, 0x20)
@@ -317,6 +336,7 @@
 
                 _doLengthMismatchCheck(accountsSize, idsSize)
 
+                let startMemoryPtr := getFreeMemoryPointer()
                 let finalMemorySize := add(0x40, mul(idsSize, 0x20))
 
                 // initialize the array for return
@@ -350,8 +370,41 @@
                     accountsIndex := add(accountsIndex, 0x20)
                     idsIndex := add(idsIndex, 0x20)
                 }
-                return(0x80, finalMemorySize)
+                return(startMemoryPtr, finalMemorySize)
             }
+
+            function _uri(id) -> startMemoryPtr, memorySize {
+                let stringSize := sload(uriLength())
+                startMemoryPtr := getFreeMemoryPointer()
+
+                // store the string pointer (0x20), starting at the free memory location (0x80)
+                mstore(getFreeMemoryPointer(), 0x20)
+                increaseFreeMemoryPointer()
+
+                // store the length of the string
+                mstore(getFreeMemoryPointer(), stringSize)
+                increaseFreeMemoryPointer()
+
+                mstore(0x00, uriLength())
+                let location := keccak256(0x00, 0x20)
+
+                let bound := div(stringSize, 0x20)
+                if mod(stringSize, 0x20) {
+                    bound := add(bound, 1)
+                }
+
+                for { let i:= 0 } lt(i, bound) { i:= add(i, 1)}
+                {
+                    // keccak256(v’s slot)+ n*(sizeof(T))
+                    let cachedChunk := sload(safeAdd(location,i))
+                    // debugEmit(cachedChunk)
+                    mstore(getFreeMemoryPointer(), cachedChunk)
+
+                    increaseFreeMemoryPointer()
+                }
+                memorySize := sub(getFreeMemoryPointer(),startMemoryPtr)
+            }
+            
 
             // @dev gets the location where values are stored in a nested mapping
             function getNestedMappingLocation(mappingSlot, key1, key2 ) -> location {
@@ -413,6 +466,10 @@
                 mstore(0, approved)
                 log3(0, 0x20, hash, owner, operator)
             }
+
+            // function debugEmit(value) {
+            //     log1(0, 0x00, value)
+            // }
 
             /* ---------------------------------------------------------- */
             /* ---------------- ERROR HELPER FUNCTIONS ----------------- */
@@ -548,24 +605,21 @@
                 firstElementIndex := add(36, ptr)
             }
 
-            // // @param from (starting address in memory) to return, e.g. 0x00
-            // // @param to (size of the return value), e.g. 0x20 for 32 bytes 0x40 for 64 bytes
-            // // @return The offset
-            // // @return The size of return value
-            // function returnMemory(offset, size) {
-            //     return(offset, size)
-            // }
+            // @dev stores the value in the free memory ponter and returns that part of memory
+            function returnBytesN(offset, size) {
+                return(offset, size)
+            }
 
-            // @dev stores the value in the free memory ponter 0x00 and returns that part of memory
-            function returnUint(v) {
-                let ptr := getFreeMemoryPointer()
-                mstore(ptr, v)
-                return(ptr, 0x20)
+            // @dev stores the value in the free memory ponter and returns that part of memory
+            function returnBytes32(v) {
+                let mptr := getFreeMemoryPointer()
+                mstore(mptr, v)
+                return(mptr, 0x20)
             }
 
             // @dev helper function that returns true (uint of 1 === true)
             function returnTrue() {
-                returnUint(1)
+                returnBytes32(1)
             }
 
             /* ------------------------------------------------------- */
