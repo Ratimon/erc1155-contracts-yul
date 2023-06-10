@@ -113,8 +113,6 @@
             case 0xa22cb465 {
                 _setApprovalForAll(decodeAsAddress(0), decodeAsUint(1))
             }
-            // cast sig "setURI(string)"
-
 
             // 0x02fe5305
 
@@ -126,15 +124,7 @@
 
             // 68747470733a2f2f746f6b656e2d63646e2d646f6d61696e2f302e6a736f6e00
 
-
-            // 0000000000000000000000000000000000000000000000000000000000000020
-            // 000000000000000000000000000000000000000000000000000000000000001f
-            // 68747470733a2f2f746f6b656e2d63646e2d646f6d61696e2f302e6a736f6e00
-            // 0000000000000000000000000000000000000000000000000000000000000000
-            // 0000000000000000000000000000000000000000000000000000000000000000
-            // 0000000000000000000000000000000000000000000000000000000000000000
-            // 0000000000000000000000000000000000000000000000000000000000000000
-
+            // cast sig "setURI(string)"
             // setURI(string)
             case 0x02fe5305 {
                 _setURI(decodeAsUint(0))
@@ -155,9 +145,7 @@
                 returnBytes32(_isApprovedForAll(decodeAsAddress(0), decodeAsAddress(1)))
             }
 
-            // cast abi-encode "setURI(string)"  'Test'
             // cast abi-encode "setURI(string)"  'https://domain/0.json'
-
             // cast sig "uri(uint256)"
             // uri(uint256)
             case 0x0e89341c {
@@ -241,18 +229,18 @@
                 // store the id array pointer (0x40), at the free memory location (0x80)
                 mstore(getFreeMemoryPointer(), 0x40)
                 // store the length of the ids array
-                mstore(add(0x40, getFreeMemoryPointer()), idsSize)
+                mstore(safeAdd(0x40, getFreeMemoryPointer()), idsSize)
 
                 // store the amount array pointer: 0x160 = 0x40 (2 pointers) + 0x20(single length) + 0x100( eg. 5 elements ), at the (increased) second byte
                 let amountsArrayPointer := add(0x40, mul(add (1, idsSize), 0x20))
                 mstore(add(0x20, getFreeMemoryPointer()), amountsArrayPointer)
                 // store the length of the amounts array
-                mstore(add(amountsArrayPointer, getFreeMemoryPointer()), amountsSize)
+                mstore(safeAdd(amountsArrayPointer, getFreeMemoryPointer()), amountsSize)
 
                 // store the first index array pointer: 0x60 = 0x40 (2 pointers) + 0x20(single length)
                 let idsIndexPointer := add(getFreeMemoryPointer(), 0x60 )
                 // store the amount array pointer plus 1 byte: 0x180 = 0x40 (2 pointers) + 0x40(double length) + 0x100( eg. 5 elements )
-                let amountsIndexPointer := add(getFreeMemoryPointer(), add(amountsArrayPointer, 0x20))
+                let amountsIndexPointer := add(getFreeMemoryPointer(), safeAdd(amountsArrayPointer, 0x20))
 
                 for { let i:= 0 } lt(i, idsSize) { i:= add(i, 1)}
                 {
@@ -307,13 +295,9 @@
                     bound := add(bound, 1)
                 }
 
-                // debugEmit(stringSize) 
-                // debugEmit(bound) 
-
                 for { let i:= 0 } lt(i, bound) { i:= add(i, 1)}
                 {
                     let cachedChunk := calldataload(stringIndex)
-                    // debugEmit(cachedChunk) 
                     // keccak256(v’s slot)+ n*(sizeof(T))
                     sstore(safeAdd(initialLocation, i), cachedChunk)
                     stringIndex := add(stringIndex, 0x20)
@@ -337,7 +321,7 @@
                 _doLengthMismatchCheck(accountsSize, idsSize)
 
                 let startMemoryPtr := getFreeMemoryPointer()
-                let finalMemorySize := add(0x40, mul(idsSize, 0x20))
+                let finalMemorySize := safeAdd(0x40, mul(idsSize, 0x20))
 
                 // initialize the array for return
     
@@ -397,7 +381,6 @@
                 {
                     // keccak256(v’s slot)+ n*(sizeof(T))
                     let cachedChunk := sload(safeAdd(location,i))
-                    // debugEmit(cachedChunk)
                     mstore(getFreeMemoryPointer(), cachedChunk)
 
                     increaseFreeMemoryPointer()
@@ -466,10 +449,6 @@
                 mstore(0, approved)
                 log3(0, 0x20, hash, owner, operator)
             }
-
-            // function debugEmit(value) {
-            //     log1(0, 0x00, value)
-            // }
 
             /* ---------------------------------------------------------- */
             /* ---------------- ERROR HELPER FUNCTIONS ----------------- */
