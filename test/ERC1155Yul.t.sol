@@ -54,6 +54,14 @@ contract ERC1155YulTest is Test {
         vm.label(address(this), "TestContract");
     }
 
+    function testUri() public {
+
+        token.setURI("https://token-cdn-domain/0.json");
+        // string memory uri = token.uri(1);
+        // assertEq(uri, ("https://token-cdn-domain/0.json");
+    }
+
+
     function testMintToEOA() public {
 
         vm.expectEmit({checkTopic1: true, checkTopic2: true, checkTopic3: true, checkData: true});

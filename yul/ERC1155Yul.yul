@@ -113,6 +113,23 @@
             case 0xa22cb465 {
                 _setApprovalForAll(decodeAsAddress(0), decodeAsUint(1))
             }
+            // cast sig "setURI(string)"
+
+
+            // 0x02fe5305
+
+            // param 1: offset of id array => 1* 32 = 32 bytes below (1 line ) from start of 1st line
+            // 0000000000000000000000000000000000000000000000000000000000000020
+
+            // length of string array => 31
+            // 000000000000000000000000000000000000000000000000000000000000001f
+
+            // 68747470733a2f2f746f6b656e2d63646e2d646f6d61696e2f302e6a736f6e00
+
+            // setURI(string)
+            case 0x02fe5305 {
+                _setURI(decodeAsUint(0))
+            }
             // cast sig "balanceOf(address,uint256)"
             // balanceOf(address,uint256)
             case 0x00fdd58e {
@@ -157,18 +174,6 @@
                     idsIndex := add(idsIndex, 0x20)
                     amountsIndex := add(amountsIndex, 0x20)
                 }
-            }
-
-            function _setApprovalForAll(operator, approved) {
-                if eq(operator, caller()) {
-                    // revert with: APPROVE_SELF
-                    // cast --format-bytes32-string "APPROVE_SELFS"
-                    mstore(0x00, 0x415050524f56455f53454c465300000000000000000000000000000000000000)
-                    revert(0x00, 0x20)
-                }
-                let location := getNestedMappingLocation(operatorApprovals(), caller(), operator)
-                sstore(location, approved)
-                _emitApprovalForAll(caller(), operator, approved)
             }
 
             function _safeTransferFrom(from, to, id, amount) {
@@ -257,6 +262,43 @@
                     amountsIndexPointer := add(amountsIndexPointer, 0x20)
                 }
                 _emitTransferBatch(caller(), from, to, getFreeMemoryPointer(), finalMemorySize)
+            }
+
+            function _setApprovalForAll(operator, approved) {
+                if eq(operator, caller()) {
+                    // revert with: APPROVE_SELF
+                    // cast --format-bytes32-string "APPROVE_SELFS"
+                    mstore(0x00, 0x415050524f56455f53454c465300000000000000000000000000000000000000)
+                    revert(0x00, 0x20)
+                }
+                let location := getNestedMappingLocation(operatorApprovals(), caller(), operator)
+                sstore(location, approved)
+                _emitApprovalForAll(caller(), operator, approved)
+            }
+
+            function _setURI(stringSizeOffset) {
+
+                let stringSize, stringIndex := decodeAsChunk(stringSizeOffset)
+                sstore(uriLength(), stringSize)
+
+                mstore(0x00, uriLength())
+                let initialLocation := keccak256(0x00, 0x20)
+
+                // keccak256(v’s slot)
+                sstore(uriLength(), stringSize)
+
+                let bound := div(stringSize, 0x20)
+                if mod(bound, 0x20) {
+                    bound := add(bound, 1)
+                }
+
+                for { let i:= 0 } lt(i, bound) { i:= add(i, 1)}
+                {
+                    let cachedChunk := calldataload(stringIndex)
+                    // keccak256(v’s slot)+ n*(sizeof(T))
+                    sstore(safeAdd(initialLocation, i), cachedChunk)
+                    stringIndex := add(stringIndex, 0x20)
+                }
             }
             
             function _balanceOf(account, id) -> amount {
@@ -467,7 +509,7 @@
             function decodeAsUint(offset) -> value {
                 let pos := add(4, mul(offset, 0x20))
                 if lt(calldatasize(), add(pos, 0x20)) {
-                    revert(0, 0)
+                    revert(0x00, 0x00)
                 }
                 value := calldataload(pos)
             }
@@ -476,15 +518,34 @@
             /// @param The pointer at which the array is stored in calldata (must point to the size argument)
             /// @return The size of the array
             /// @return The offset at which first argument is stored
-            function decodeAsArray(pointer) -> size, firstElementIndex {
-                size := calldataload(add(4, pointer))
-                if lt(calldatasize(), add(pointer, mul(size, 0x20))) {
-                    revert(0, 0)
+            function decodeAsArray(ptr) -> size, firstElementIndex {
+                size := calldataload(add(4, ptr))
+                if lt(calldatasize(), add(ptr, mul(size, 0x20))) {
+                    revert(0x00, 0x00)
                 }
-                // firstElementIndex := add(0x24, pointer)
+                // firstElementIndex := add(0x24, ptr)
                 // 32byte + 4 byte
-                firstElementIndex := add(36, pointer)
+                firstElementIndex := add(36, ptr)
+            }
 
+            /// @notice A function to decode a string calldata
+            /// @param The pointer at which the string is stored in calldata (must point to the size argument)
+            /// @return The size of the string chunk
+            /// @return The offset at which first chunk is stored
+            function decodeAsChunk(ptr) -> size, firstElementIndex {
+                size := calldataload(add(4, ptr))
+
+                let bound := div(size, 0x20)
+                if mod(bound, 0x20) {
+                    bound := add(bound, 1)
+                }
+
+                if lt(calldatasize(), add(ptr, mul(bound, 0x20))) {
+                    revert(0x00, 0x00)
+                }
+                // firstElementIndex := add(0x24, ptr)
+                // 32byte + 4 byte
+                firstElementIndex := add(36, ptr)
             }
 
             // // @param from (starting address in memory) to return, e.g. 0x00
@@ -495,7 +556,7 @@
             //     return(offset, size)
             // }
 
-            // @dev stores the value in memory 0x00 and returns that part of memory
+            // @dev stores the value in the free memory ponter 0x00 and returns that part of memory
             function returnUint(v) {
                 let ptr := getFreeMemoryPointer()
                 mstore(ptr, v)

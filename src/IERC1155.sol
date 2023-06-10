@@ -42,6 +42,10 @@ pragma solidity ^0.8.19;
      */
     event URI(string value, uint256 indexed id);
 
+    function uri(uint256 id) external view returns (string memory);
+
+    function setURI(string memory uri) external;
+
     /**
      * @dev Returns the amount of tokens of token type `id` owned by `account`.
      *
