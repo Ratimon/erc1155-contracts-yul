@@ -55,9 +55,11 @@ contract ERC1155YulTest is Test {
     }
 
     function testUri() public {
+        string memory uri = token.uri(1);
+        assertEq(uri, "https://token-erc1155-cdn-domain/0.json");
 
         token.setURI("https://token-cdn-domain/0.json");
-        string memory uri = token.uri(1);
+        uri = token.uri(1);
         assertEq(uri, "https://token-cdn-domain/0.json");
     }
 

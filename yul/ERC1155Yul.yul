@@ -11,6 +11,24 @@
      * @notice Constructor
      */
     code {
+
+        function uriLength() -> slot { slot := 0x02 }
+
+        sstore(uriLength(), 0x27)
+        mstore(0x00, uriLength())
+        // keccak256(v’s slot)
+        let initialLocation := keccak256(0x00, 0x20)
+        mstore(0x00, 0x00)
+
+        // cast calldata "setURI(string)" 'https://token-erc1155-cdn-domain/0.json'
+        // 0000000000000000000000000000000000000000000000000000000000000020
+        // 0000000000000000000000000000000000000000000000000000000000000027
+        // 68747470733a2f2f746f6b656e2d657263313135352d63646e2d646f6d61696e
+        // 2f302e6a736f6e00000000000000000000000000000000000000000000000000
+
+        sstore(add(initialLocation, 0x00), 0x68747470733a2f2f746f6b656e2d657263313135352d63646e2d646f6d61696e)
+        sstore(add(initialLocation, 0x01), 0x2f302e6a736f6e00000000000000000000000000000000000000000000000000)
+
         datacopy(0, dataoffset("runtime"), datasize("runtime"))
         return(0, datasize("runtime"))
     }
@@ -286,10 +304,8 @@
 
                 mstore(0x00, uriLength())
                 let initialLocation := keccak256(0x00, 0x20)
-
                 // keccak256(v’s slot)
                 sstore(uriLength(), stringSize)
-
                 let bound := div(stringSize, 0x20)
                 if mod(stringSize, 0x20) {
                     bound := add(bound, 1)
@@ -382,7 +398,6 @@
                     // keccak256(v’s slot)+ n*(sizeof(T))
                     let cachedChunk := sload(safeAdd(location,i))
                     mstore(getFreeMemoryPointer(), cachedChunk)
-
                     increaseFreeMemoryPointer()
                 }
                 memorySize := sub(getFreeMemoryPointer(),startMemoryPtr)
@@ -520,7 +535,6 @@
                 mstore(getFreeMemoryPointerPosition(), slot)
             }
 
-
             /* -------------------------------------------------- */
             /* ---------- CALLDATA DECODING FUNCTIONS ----------- */
             /* -------------------------------------------------- */
@@ -570,12 +584,10 @@
             /// @return The offset at which first chunk is stored
             function decodeAsChunk(ptr) -> size, firstElementIndex {
                 size := calldataload(add(4, ptr))
-
                 let bound := div(size, 0x20)
-                if mod(bound, 0x20) {
+                if mod(size, 0x20) {
                     bound := add(bound, 1)
                 }
-
                 if lt(calldatasize(), add(ptr, mul(bound, 0x20))) {
                     revert(0x00, 0x00)
                 }
