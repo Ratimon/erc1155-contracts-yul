@@ -1,17 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {Test } from "@forge-std/Test.sol";
-import {console } from "@forge-std/console.sol";
-import  {Vm } from "@forge-std/Vm.sol";
+import {Test} from "@forge-std/Test.sol";
+import {console} from "@forge-std/console.sol";
+import {Vm} from "@forge-std/Vm.sol";
 
-import { YulDeployer } from "./lib/YulDeployer.sol";
-import { IERC1155 } from "../src/IERC1155.sol";
+import {YulDeployer} from "./lib/YulDeployer.sol";
+import {IERC1155} from "../src/IERC1155.sol";
 // import { ERC1155Recipient } from "../src/ERC1155Recipient.sol";
 
-
 contract ERC1155YulTest is Test {
-
     address alice;
     address bob;
 
@@ -21,24 +19,12 @@ contract ERC1155YulTest is Test {
     mapping(address => mapping(uint256 => uint256)) public userMintAmounts;
     mapping(address => mapping(uint256 => uint256)) public userTransferOrBurnAmounts;
 
-    event ApprovalForAll(
-        address indexed owner,
-        address indexed operator,
-        bool approved
-    );
+    event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
     event TransferSingle(
-        address indexed operator,
-        address indexed from,
-        address indexed to,
-        uint256 id,
-        uint256 amount
+        address indexed operator, address indexed from, address indexed to, uint256 id, uint256 amount
     );
     event TransferBatch(
-        address indexed operator,
-        address indexed from,
-        address indexed to,
-        uint256[] ids,
-        uint256[] amounts
+        address indexed operator, address indexed from, address indexed to, uint256[] ids, uint256[] amounts
     );
     event URI(string _value, uint256 indexed _id);
 
@@ -63,9 +49,7 @@ contract ERC1155YulTest is Test {
         assertEq(uri, "https://token-cdn-domain/0.json");
     }
 
-
     function testMintToEOA() public {
-
         vm.expectEmit({checkTopic1: true, checkTopic2: true, checkTopic3: true, checkData: true});
         emit TransferSingle(address(this), address(0x0), address(0xBEEF), 1337, 1);
 
@@ -96,7 +80,6 @@ contract ERC1155YulTest is Test {
         assertEq(token.balanceOf(address(0xBEEF), 1339), 300);
         assertEq(token.balanceOf(address(0xBEEF), 1340), 400);
         assertEq(token.balanceOf(address(0xBEEF), 1341), 500);
-
     }
 
     function testApproveAll() public {
@@ -238,7 +221,6 @@ contract ERC1155YulTest is Test {
         token.safeTransferFrom(address(this), address(0), 1337, 70, "");
     }
 
-
     function testFailSafeBatchTransferInsufficientBalance() public {
         address from = address(0xABCD);
 
@@ -335,7 +317,6 @@ contract ERC1155YulTest is Test {
         token.safeBatchTransferFrom(from, address(0xBEEF), ids, transferAmounts, "");
     }
 
-
     function testFailBatchMintToZero() public {
         uint256[] memory ids = new uint256[](5);
         ids[0] = 1337;
@@ -388,12 +369,7 @@ contract ERC1155YulTest is Test {
         token.balanceOfBatch(tos, ids);
     }
 
-    function testMintToEOA(
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes memory mintData
-    ) public {
+    function testMintToEOA(address to, uint256 id, uint256 amount, bytes memory mintData) public {
         if (to == address(0)) to = address(0xBEEF);
 
         if (uint256(uint160(to)) <= 18 || to.code.length > 0) return;
@@ -403,9 +379,7 @@ contract ERC1155YulTest is Test {
         assertEq(token.balanceOf(to, id), amount);
     }
 
-
     function testApproveAll(address to, bool approved) public {
-
         token.setApprovalForAll(to, approved);
 
         assertEq(token.isApprovedForAll(address(this), to), approved);
@@ -464,11 +438,7 @@ contract ERC1155YulTest is Test {
         assertEq(token.balanceOf(address(this), id), mintAmount - transferAmount);
     }
 
-    function testFailMintToZero(
-        uint256 id,
-        uint256 amount,
-        bytes memory data
-    ) public {
+    function testFailMintToZero(uint256 id, uint256 amount, bytes memory data) public {
         token.mint(address(0), id, amount, data);
     }
 
@@ -550,11 +520,9 @@ contract ERC1155YulTest is Test {
         token.batchMint(address(to), ids, amounts, mintData);
     }
 
-
     function testFailBalanceOfBatchWithArrayMismatch(address[] memory tos, uint256[] memory ids) public view {
         if (tos.length == ids.length) revert();
 
         token.balanceOfBatch(tos, ids);
     }
-
 }

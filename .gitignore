@@ -13,4 +13,9 @@ docs/
 # Dotenv file
 .env
 
+# vscode
+.vscode/*
+!.vscode/extensions.json
+!*.default
+
 .DS_Store

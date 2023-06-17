@@ -9,7 +9,7 @@ pragma solidity ^0.8.19;
  *
  * _Available since v3.1._
  */
- interface IERC1155 {
+interface IERC1155 {
     /**
      * @dev Emitted when `value` tokens of token type `id` are transferred from `from` to `to` by `operator`.
      */
@@ -20,11 +20,7 @@ pragma solidity ^0.8.19;
      * transfers.
      */
     event TransferBatch(
-        address indexed operator,
-        address indexed from,
-        address indexed to,
-        uint256[] ids,
-        uint256[] values
+        address indexed operator, address indexed from, address indexed to, uint256[] ids, uint256[] values
     );
 
     /**
@@ -62,10 +58,10 @@ pragma solidity ^0.8.19;
      *
      * - `accounts` and `ids` must have the same length.
      */
-    function balanceOfBatch(
-        address[] calldata accounts,
-        uint256[] calldata ids
-    ) external view returns (uint256[] memory);
+    function balanceOfBatch(address[] calldata accounts, uint256[] calldata ids)
+        external
+        view
+        returns (uint256[] memory);
 
     /**
      * @dev Grants or revokes permission to `operator` to transfer the caller's tokens, according to `approved`,
@@ -120,17 +116,7 @@ pragma solidity ^0.8.19;
     ) external;
 
     // custom functions
-    function mint(
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes calldata
-    ) external;
+    function mint(address to, uint256 id, uint256 amount, bytes calldata) external;
 
-    function batchMint(
-        address to,
-        uint256[] calldata id,
-        uint256[] calldata amounts,
-        bytes calldata
-    ) external;
+    function batchMint(address to, uint256[] calldata id, uint256[] calldata amounts, bytes calldata) external;
 }
