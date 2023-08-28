@@ -85,15 +85,23 @@
             // function selector calling  eg. (`batchMint(address,uint256[],uint256[])`)
             // 0x0ca83480
 
+            // abi layout
+            // head(a1) head(a2) head(a3) tail(a1) tail(a2) tail(a3)
+            // head(address) head(uint256[]) head(uint256[]) head(bytes)
+
+            // head(a1) => head(address) => enc(address) Note that tail(address) is empty
             // param 1: `address to`
             // 000000000000000000000000f8e81d47203a594245e36c48e151709f0c19fbe8
 
+            // head(a2) => head(uint256[]) => enc( len head(a1) head(a2) ) 
             // param 2: offset of id array => 3* 32 = 96 bytes below (3 lines ) from start of 1st (address in this case) line
             // 0000000000000000000000000000000000000000000000000000000000000060
 
+            // head(a3) => head(uint256[]) => enc( len head(a1) head(a2) head(a3)) 
             // param 3: offset of amount array => 7* 32 = 224 bytes (7 lines ) below from start of  1st (address in this case) line
             // 00000000000000000000000000000000000000000000000000000000000000e0
 
+            // tail(a2) => enc(a2)
             // length of id array
             // 0000000000000000000000000000000000000000000000000000000000000003
 
@@ -101,6 +109,7 @@
             // 0000000000000000000000000000000000000000000000000000000000000002
             // 0000000000000000000000000000000000000000000000000000000000000003
 
+            // tail(a3) => enc(a3)
             // length of amount array
             // 0000000000000000000000000000000000000000000000000000000000000003
 
